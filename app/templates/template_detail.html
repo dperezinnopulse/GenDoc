@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PDFGen - Plantilla</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <a href="/admin">← Volver</a>
+    <h1>{{ template.name }}</h1>
+    <p>Tipo: {{ template.kind }} | ID: {{ template.id }}</p>
+    {% if template.kind == 'pdf' %}
+    <p><a href="/admin/templates/{{ template.id }}/overlay">Abrir editor de posiciones (PDF)</a></p>
+    {% endif %}
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+    <h2>Mapeo de campos</h2>
+    <form method="post" action="/admin/templates/{{ template.id }}/save_mapping">
+      <label>Mapping (JSON). Ej: {"nombre": "alumno.nombre"}</label>
+      <textarea name="mapping_json" rows="6" style="width:100%;">{{ template.mapping | tojson(indent=2) }}</textarea>
+
+      <label>Secciones repetidas (JSON)</label>
+      <textarea name="repeat_json" rows="6" style="width:100%;">{{ template.repeat_sections | tojson(indent=2) }}</textarea>
+
+      <label>Schema de validación (JSON Schema)</label>
+      <textarea name="schema_json" rows="10" style="width:100%;">{{ template.schema | tojson(indent=2) }}</textarea>
+
+      <button type="submit">Guardar</button>
+    </form>
+
+    <h2>Prueba de render</h2>
+    <form method="post" action="/admin/templates/{{ template.id }}/test_render" target="_blank">
+      <label>Datos (JSON)</label>
+      <textarea name="data_json" rows="10" style="width:100%;">{
+  "nombre": "Ana",
+  "_positions": { "nombre": [100, 700] }
+}</textarea>
+      <button type="submit">Generar PDF</button>
+    </form>
+
+    <h3>Notas</h3>
+    <ul>
+      <li>DOCX: Usa placeholders de Jinja2, p.ej. {{ "{{ nombre }}" }} o loops con {% raw %}{% for a in alumnos %}{% endfor %}{% endraw %}.</li>
+      <li>XLSX: Reemplazo básico de {{ "{{clave}}" }} en celdas.</li>
+      <li>PDF: Si tiene campos AcroForm, se rellenan por nombre. Si no, usa overlay con <code>_positions</code> por clave. Puedes definirlas desde el “Editor de posiciones”.</li>
+    </ul>
+  </div>
+</body>
+</html>

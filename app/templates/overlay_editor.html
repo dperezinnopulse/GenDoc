@@ -1,0 +1,241 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PDFGen - Editor Overlay</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .overlay-wrap { position: relative; display: inline-block; }
+    .overlay-canvas { position: absolute; top:0; left:0; }
+    .controls { margin: 12px 0; display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    input[type=text], input[type=number] { width: 200px; }
+    .panel { background:#f8fafc; padding:12px; border-radius:8px; margin-top:12px; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/admin/templates/{{ template.id }}">← Volver</a>
+    <h1>Overlay: {{ template.name }}</h1>
+
+    <div class="controls">
+      <label>Campo:</label>
+      <input type="text" id="fieldName" placeholder="ej. Alumno.Nombre" />
+      <label>Fuente</label>
+      <input type="text" id="fontName" value="Helvetica" />
+      <label>Tamaño</label>
+      <input type="number" id="fontSize" value="10" />
+      <label>Color</label>
+      <input type="text" id="fontColor" value="#111111" />
+      <label>Modo:</label>
+      <select id="layerMode">
+        <option value="fixed">Campos fijos</option>
+        <option value="header">Cabecera</option>
+        <option value="footer">Pie</option>
+      </select>
+      <button id="addFieldBtn" type="button">Añadir marcador</button>
+      <button id="saveBtn" type="button">Guardar todo</button>
+    </div>
+
+    <div class="overlay-wrap">
+      <img id="pageImg" src="/admin/templates/{{ template.id }}/overlay/page.png?page=1" />
+      <canvas id="overlay" class="overlay-canvas"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>Estilo por defecto</h3>
+      <div class="row">
+        <label>Fuente</label>
+        <input type="text" id="defaultFont" value="Helvetica" />
+        <label>Tamaño</label>
+        <input type="number" id="defaultSize" value="10" />
+        <label>Color</label>
+        <input type="text" id="defaultColor" value="#111111" />
+        <button id="setDefaultStyle" type="button">Aplicar</button>
+      </div>
+      <pre id="stylesOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
+    </div>
+
+    <div class="panel">
+      <h3>Cabecera y Pie</h3>
+      <p>En modo Cabecera/Pie, los clics posicionan esos elementos. Soporta claves especiales: <code>_page_number</code> y <code>_page_count</code>.</p>
+      <pre id="headerOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
+      <pre id="footerOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
+    </div>
+
+    <div class="panel">
+      <h3>Fila repetida</h3>
+      <p>Define un bloque de repetición vertical para un array (ej. Alumno). Cada elemento se dibuja desplazando en Y.</p>
+      <div class="controls">
+        <label>Array (ruta)</label>
+        <input type="text" id="repeatArrayPath" placeholder="ej. Alumno" />
+        <label>Y inicial</label>
+        <input type="number" id="repeatStartY" value="700" />
+        <label>Espaciado Y</label>
+        <input type="number" id="repeatDeltaY" value="24" />
+        <label>Filas por página (opcional)</label>
+        <input type="number" id="rowsPerPage" value="0" />
+        <label>Y fin (opcional)</label>
+        <input type="number" id="endY" value="0" />
+        <button id="addRepeatBtn" type="button">Añadir definición de fila</button>
+      </div>
+      <pre id="repeatOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
+    </div>
+
+    <pre id="positionsOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
+  </div>
+<script>
+const positions = JSON.parse('{{ positions | safe }}' || '{}');
+const repeatRows = JSON.parse('{{ repeat_rows | safe }}' || '{}');
+const styles = JSON.parse('{{ styles | safe }}' || '{}');
+const defaultStyle = JSON.parse('{{ default_style | safe }}' || '{"font":"Helvetica","size":10,"color":"#111111"}');
+const headerPositions = JSON.parse('{{ header_positions | safe }}' || '{}');
+const footerPositions = JSON.parse('{{ footer_positions | safe }}' || '{}');
+
+const img = document.getElementById('pageImg');
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d');
+const out = document.getElementById('positionsOut');
+const repeatOut = document.getElementById('repeatOut');
+const headerOut = document.getElementById('headerOut');
+const footerOut = document.getElementById('footerOut');
+const stylesOut = document.getElementById('stylesOut');
+
+function draw() {
+  canvas.width = img.clientWidth;
+  canvas.height = img.clientHeight;
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  // fixed positions with labels
+  ctx.strokeStyle = '#ef4444';
+  ctx.fillStyle = 'rgba(239,68,68,0.15)';
+  ctx.lineWidth = 2;
+  Object.entries(positions).forEach(([key, [x,y]]) => {
+    ctx.beginPath();
+    ctx.arc(x, canvas.height - y, 6, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#111827';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(key, x + 8, canvas.height - y - 8);
+    ctx.fillStyle = 'rgba(239,68,68,0.15)';
+  });
+  // header
+  ctx.strokeStyle = '#3b82f6';
+  Object.entries(headerPositions).forEach(([key, [x,y]]) => {
+    ctx.beginPath();
+    ctx.rect(x-3, canvas.height - y - 3, 6, 6);
+    ctx.stroke();
+    ctx.fillStyle = '#1e40af';
+    ctx.fillText(key, x + 8, canvas.height - y - 8);
+  });
+  // footer
+  ctx.strokeStyle = '#f59e0b';
+  Object.entries(footerPositions).forEach(([key, [x,y]]) => {
+    ctx.beginPath();
+    ctx.rect(x-3, canvas.height - y - 3, 6, 6);
+    ctx.stroke();
+    ctx.fillStyle = '#92400e';
+    ctx.fillText(key, x + 8, canvas.height - y - 8);
+  });
+  // repeat guides
+  Object.values(repeatRows).forEach(def => {
+    const { startY, deltaY, countPreview = 3 } = def;
+    ctx.strokeStyle = '#10b981';
+    for (let i=0;i<countPreview;i++) {
+      const y = canvas.height - (startY - i*deltaY);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+  });
+  out.textContent = JSON.stringify(positions, null, 2);
+  repeatOut.textContent = JSON.stringify(repeatRows, null, 2);
+  headerOut.textContent = 'Header: ' + JSON.stringify(headerPositions, null, 2);
+  footerOut.textContent = 'Footer: ' + JSON.stringify(footerPositions, null, 2);
+  stylesOut.textContent = 'Styles: ' + JSON.stringify({ default: defaultStyle, perField: styles }, null, 2);
+}
+
+img.onload = draw;
+window.onresize = draw;
+
+function currentStyle() {
+  return {
+    font: document.getElementById('fontName').value || defaultStyle.font,
+    size: parseInt(document.getElementById('fontSize').value, 10) || defaultStyle.size,
+    color: document.getElementById('fontColor').value || defaultStyle.color,
+  };
+}
+
+document.getElementById('setDefaultStyle').addEventListener('click', () => {
+  defaultStyle.font = document.getElementById('defaultFont').value || 'Helvetica';
+  defaultStyle.size = parseInt(document.getElementById('defaultSize').value, 10) || 10;
+  defaultStyle.color = document.getElementById('defaultColor').value || '#111111';
+  draw();
+});
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const key = document.getElementById('fieldName').value.trim();
+  if (!key) { alert('Escribe un nombre de campo'); return; }
+  const mode = document.getElementById('layerMode').value;
+  const coord = [Math.round(x), Math.round(canvas.height - y)];
+  if (mode === 'header') {
+    headerPositions[key] = coord;
+  } else if (mode === 'footer') {
+    footerPositions[key] = coord;
+  } else {
+    positions[key] = coord;
+    styles[key] = currentStyle();
+  }
+  draw();
+});
+
+document.getElementById('addFieldBtn').addEventListener('click', () => {
+  const key = document.getElementById('fieldName').value.trim();
+  if (!key) return;
+  const mode = document.getElementById('layerMode').value;
+  const coord = [40, 40];
+  if (mode === 'header') {
+    if (!(key in headerPositions)) headerPositions[key] = coord;
+  } else if (mode === 'footer') {
+    if (!(key in footerPositions)) footerPositions[key] = coord;
+  } else {
+    if (!(key in positions)) positions[key] = coord;
+    styles[key] = currentStyle();
+  }
+  draw();
+});
+
+document.getElementById('addRepeatBtn').addEventListener('click', () => {
+  const arr = document.getElementById('repeatArrayPath').value.trim();
+  const startY = parseInt(document.getElementById('repeatStartY').value, 10) || 700;
+  const deltaY = parseInt(document.getElementById('repeatDeltaY').value, 10) || 24;
+  const rowsPerPage = parseInt(document.getElementById('rowsPerPage').value, 10) || 0;
+  const endY = parseInt(document.getElementById('endY').value, 10) || 0;
+  if (!arr) { alert('Ruta del array vacía'); return; }
+  const def = { startY, deltaY };
+  if (rowsPerPage > 0) def.rowsPerPage = rowsPerPage;
+  if (endY > 0) def.endY = endY;
+  repeatRows[arr] = def;
+  draw();
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const formData = new FormData();
+  formData.append('positions_json', JSON.stringify(positions));
+  formData.append('repeat_rows_json', JSON.stringify(repeatRows));
+  formData.append('styles_json', JSON.stringify(styles));
+  formData.append('default_style_json', JSON.stringify(defaultStyle));
+  formData.append('header_json', JSON.stringify(headerPositions));
+  formData.append('footer_json', JSON.stringify(footerPositions));
+  const resp = await fetch('/admin/templates/{{ template.id }}/overlay/save', {
+    method: 'POST', body: formData
+  });
+  if (resp.ok) alert('Guardado'); else alert('Error al guardar');
+});
+</script>
+</body>
+</html>
