@@ -41,6 +41,8 @@ class TemplateStore:
             "mapping": {},
             "repeat_sections": {},
             "schema": {},
+            "_images": {},
+            "_image_previews": {},
         }
         with open(self._meta_path(template_id), "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
@@ -79,13 +81,17 @@ class TemplateStore:
             raise FileNotFoundError("Archivo de plantilla no encontrado")
         return path
 
-    def save_mapping(self, template_id: str, mapping: Dict[str, Any], repeat_sections: Optional[Dict[str, Any]] = None, schema: Optional[Dict[str, Any]] = None):
+    def save_mapping(self, template_id: str, mapping: Dict[str, Any], repeat_sections: Optional[Dict[str, Any]] = None, schema: Optional[Dict[str, Any]] = None, images: Optional[Dict[str, Any]] = None, image_previews: Optional[Dict[str, Any]] = None):
         meta = self.get_template_meta(template_id)
         meta["mapping"] = mapping or {}
         if repeat_sections is not None:
             meta["repeat_sections"] = repeat_sections
         if schema is not None:
             meta["schema"] = schema
+        if images is not None:
+            meta["_images"] = images
+        if image_previews is not None:
+            meta["_image_previews"] = image_previews
         with open(self._meta_path(template_id), "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
 

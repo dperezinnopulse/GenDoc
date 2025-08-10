@@ -1,89 +1,136 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>PDFGen - Editor Overlay</title>
-  <link rel="stylesheet" href="/static/styles.css" />
-  <style>
-    .overlay-wrap { position: relative; display: inline-block; }
-    .overlay-canvas { position: absolute; top:0; left:0; }
-    .controls { margin: 12px 0; display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
-    input[type=text], input[type=number] { width: 200px; }
-    .panel { background:#f8fafc; padding:12px; border-radius:8px; margin-top:12px; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <a href="/admin/templates/{{ template.id }}">← Volver</a>
-    <h1>Overlay: {{ template.name }}</h1>
+{% extends "base.html" %}
+{% block subnav %}
+<a href="/admin/templates/{{ template.id }}">Resumen</a>
+<a href="/admin/templates/{{ template.id }}/overlay" class="active">Editor visual</a>
+<a href="/admin/templates/{{ template.id }}/markers">Editar marcadores</a>
+<a href="#">Mapeo/Secciones</a>
+<a href="/admin/templates/{{ template.id }}/test_render" target="_blank">Prueba</a>
+{% endblock %}
+{% block content %}
+<style>
+  .layout { display: flex; gap: 16px; align-items: flex-start; }
+  .viewer { max-width: 100%; max-height: 80vh; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+  .overlay-wrap { position: relative; display: inline-block; }
+  .overlay-canvas { position: absolute; top:0; left:0; }
+  .controls { margin: 12px 0; display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+  input[type=text], input[type=number] { padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px; }
+  .panel { background:#f8fafc; padding:12px; border-radius:8px; margin-top:12px; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
+  .side { width: 432px; } /* increased by 20% from 360px */
+  .list { max-height: 480px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #fff; }
+  .item { display: grid; grid-template-columns: 1fr 90px 90px 30px; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px dashed #f1f5f9; }
+  .item:last-child { border-bottom: none; }
+  .item input[type=text] { width: 100%; }
+  .item input[type=number] { width: 100%; }
+  .item .del { background:#ef4444; color:#fff; border:0; border-radius:6px; width:28px; height:28px; }
+  .hint { font-size: 12px; color:#6b7280; }
+  .badge { display:inline-block; background:#e5e7eb; padding:2px 6px; border-radius: 999px; font-size: 12px; }
+  .imgItem { display:grid; grid-template-columns: 1fr 90px 90px 90px 30px; gap:6px; align-items:center; padding:4px 0; border-bottom:1px dashed #f1f5f9; }
+  .imgItem input[type=text], .imgItem input[type=number] { width:100%; }
+  .handle { position:absolute; width:10px; height:10px; background:#fff; border:1px solid #111827; border-radius:2px; }
+</style>
+<div>
+  <h1>Overlay: {{ template.name }}</h1>
 
-    <div class="controls">
-      <label>Campo:</label>
-      <input type="text" id="fieldName" placeholder="ej. Alumno.Nombre" />
-      <label>Fuente</label>
-      <input type="text" id="fontName" value="Helvetica" />
-      <label>Tamaño</label>
-      <input type="number" id="fontSize" value="10" />
-      <label>Color</label>
-      <input type="text" id="fontColor" value="#111111" />
-      <label>Modo:</label>
-      <select id="layerMode">
-        <option value="fixed">Campos fijos</option>
-        <option value="header">Cabecera</option>
-        <option value="footer">Pie</option>
-      </select>
-      <button id="addFieldBtn" type="button">Añadir marcador</button>
-      <button id="saveBtn" type="button">Guardar todo</button>
-    </div>
-
-    <div class="overlay-wrap">
-      <img id="pageImg" src="/admin/templates/{{ template.id }}/overlay/page.png?page=1" />
-      <canvas id="overlay" class="overlay-canvas"></canvas>
-    </div>
-
-    <div class="panel">
-      <h3>Estilo por defecto</h3>
-      <div class="row">
-        <label>Fuente</label>
-        <input type="text" id="defaultFont" value="Helvetica" />
-        <label>Tamaño</label>
-        <input type="number" id="defaultSize" value="10" />
-        <label>Color</label>
-        <input type="text" id="defaultColor" value="#111111" />
-        <button id="setDefaultStyle" type="button">Aplicar</button>
-      </div>
-      <pre id="stylesOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
-    </div>
-
-    <div class="panel">
-      <h3>Cabecera y Pie</h3>
-      <p>En modo Cabecera/Pie, los clics posicionan esos elementos. Soporta claves especiales: <code>_page_number</code> y <code>_page_count</code>.</p>
-      <pre id="headerOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
-      <pre id="footerOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
-    </div>
-
-    <div class="panel">
-      <h3>Fila repetida</h3>
-      <p>Define un bloque de repetición vertical para un array (ej. Alumno). Cada elemento se dibuja desplazando en Y.</p>
-      <div class="controls">
-        <label>Array (ruta)</label>
-        <input type="text" id="repeatArrayPath" placeholder="ej. Alumno" />
-        <label>Y inicial</label>
-        <input type="number" id="repeatStartY" value="700" />
-        <label>Espaciado Y</label>
-        <input type="number" id="repeatDeltaY" value="24" />
-        <label>Filas por página (opcional)</label>
-        <input type="number" id="rowsPerPage" value="0" />
-        <label>Y fin (opcional)</label>
-        <input type="number" id="endY" value="0" />
-        <button id="addRepeatBtn" type="button">Añadir definición de fila</button>
-      </div>
-      <pre id="repeatOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
-    </div>
-
-    <pre id="positionsOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
+  <div class="controls">
+    <label>Campo:</label>
+    <input type="text" id="fieldName" placeholder="ej. Alumno.Nombre" />
+    <label>Tipo</label>
+    <select id="fieldType">
+      <option value="text" selected>Texto</option>
+      <option value="image">Imagen</option>
+    </select>
+    <input type="file" id="fieldImageFile" accept="image/*" style="display:none;" />
+    <label>Fuente</label>
+    <input type="text" id="fontName" value="Helvetica" />
+    <label>Tamaño</label>
+    <input type="number" id="fontSize" value="10" />
+    <label>Color</label>
+    <input type="text" id="fontColor" value="#111111" />
+    <label>Modo:</label>
+    <select id="layerMode">
+      <option value="fixed">Campos fijos</option>
+      <option value="header">Cabecera</option>
+      <option value="footer">Pie</option>
+    </select>
+    <button id="addFieldBtn" type="button">Añadir marcador</button>
+    <button id="saveBtn" type="button">Guardar todo</button>
   </div>
+
+  <div class="panel">Escala de previsualización: {{ preview_scale }}</div>
+
+  <div class="layout">
+    <div class="viewer" id="viewer">
+      <div class="overlay-wrap" id="wrap">
+        <img id="pageImg" src="/admin/templates/{{ template.id }}/overlay/page.png?page=1" />
+        <canvas id="overlay" class="overlay-canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel">
+        <h3>Marcadores <span class="badge">arrastrar para mover</span></h3>
+        <div class="list">
+          <div class="hint">Fijos</div>
+          <div id="listFixed"></div>
+          <div class="hint" style="margin-top:8px;">Cabecera</div>
+          <div id="listHeader"></div>
+          <div class="hint" style="margin-top:8px;">Pie</div>
+          <div id="listFooter"></div>
+          <div class="hint" style="margin-top:8px;">Imágenes</div>
+          <div id="listImages"></div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <label><input type="checkbox" id="snapToggle" /> Snap</label>
+          <label>Grid</label>
+          <input type="number" id="gridSize" value="5" step="1" style="width:80px;" />
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <label>Zoom</label>
+          <input type="number" id="zoomInput" value="1" step="0.1" style="width:100px;" />
+          <button type="button" id="zoomIn">+</button>
+          <button type="button" id="zoomOut">-</button>
+          <button type="button" id="centerBtn">Centrar seleccionado</button>
+        </div>
+        <div class="hint">Zoom afecta al tamaño de previsualización (no a las coordenadas guardadas).</div>
+      </div>
+
+      <div class="panel">
+        <h3>Ajuste fino</h3>
+        <div class="row">
+          <label>Offset X</label>
+          <input type="number" id="offsetX" value="{{ offset_x }}" />
+          <label>Offset Y</label>
+          <input type="number" id="offsetY" value="{{ offset_y }}" />
+          <label>Preview scale</label>
+          <input type="number" id="previewScaleInput" step="0.1" value="{{ preview_scale }}" />
+        </div>
+        <small>Usa el offset si el texto real aparece desplazado respecto a la posición marcada. Valores positivos desplazan a la derecha (X) o hacia arriba (Y).</small>
+      </div>
+
+      <div class="panel">
+        <h3>Fila repetida</h3>
+        <p>Define un bloque de repetición vertical para un array (ej. Alumno). Cada elemento se dibuja desplazando en Y.</p>
+        <div class="controls">
+          <label>Array (ruta)</label>
+          <input type="text" id="repeatArrayPath" placeholder="ej. Alumno" />
+          <label>Y inicial</label>
+          <input type="number" id="repeatStartY" value="700" />
+          <label>Espaciado Y</label>
+          <input type="number" id="repeatDeltaY" value="24" />
+          <label>Filas por página (opcional)</label>
+          <input type="number" id="rowsPerPage" value="0" />
+          <label>Y fin (opcional)</label>
+          <input type="number" id="endY" value="0" />
+          <button id="addRepeatBtn" type="button">Añadir definición de fila</button>
+        </div>
+        <pre id="repeatOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <pre id="positionsOut" style="background:#f7fafc; padding:8px; border-radius:8px; overflow:auto;"></pre>
+</div>
 <script>
 const positions = JSON.parse('{{ positions | safe }}' || '{}');
 const repeatRows = JSON.parse('{{ repeat_rows | safe }}' || '{}');
@@ -91,72 +138,83 @@ const styles = JSON.parse('{{ styles | safe }}' || '{}');
 const defaultStyle = JSON.parse('{{ default_style | safe }}' || '{"font":"Helvetica","size":10,"color":"#111111"}');
 const headerPositions = JSON.parse('{{ header_positions | safe }}' || '{}');
 const footerPositions = JSON.parse('{{ footer_positions | safe }}' || '{}');
+const previewScale = Number('{{ preview_scale }}') || 1.5;
+const images = JSON.parse('{{ images | safe }}' || '{}'); // {key:{x,y,width,height}}
+const imagePreviews = JSON.parse('{{ image_previews | safe }}' || '{}'); // {key:dataUrl}
 
 const img = document.getElementById('pageImg');
 const canvas = document.getElementById('overlay');
 const ctx = canvas.getContext('2d');
+const viewer = document.getElementById('viewer');
+const wrap = document.getElementById('wrap');
 const out = document.getElementById('positionsOut');
 const repeatOut = document.getElementById('repeatOut');
-const headerOut = document.getElementById('headerOut');
-const footerOut = document.getElementById('footerOut');
-const stylesOut = document.getElementById('stylesOut');
+const listFixed = document.getElementById('listFixed');
+const listHeader = document.getElementById('listHeader');
+const listFooter = document.getElementById('listFooter');
+const listImages = document.getElementById('listImages');
 
-function draw() {
-  canvas.width = img.clientWidth;
-  canvas.height = img.clientHeight;
-  ctx.clearRect(0,0,canvas.width, canvas.height);
-  // fixed positions with labels
-  ctx.strokeStyle = '#ef4444';
-  ctx.fillStyle = 'rgba(239,68,68,0.15)';
-  ctx.lineWidth = 2;
-  Object.entries(positions).forEach(([key, [x,y]]) => {
-    ctx.beginPath();
-    ctx.arc(x, canvas.height - y, 6, 0, Math.PI*2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = '#111827';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(key, x + 8, canvas.height - y - 8);
-    ctx.fillStyle = 'rgba(239,68,68,0.15)';
-  });
-  // header
-  ctx.strokeStyle = '#3b82f6';
-  Object.entries(headerPositions).forEach(([key, [x,y]]) => {
-    ctx.beginPath();
-    ctx.rect(x-3, canvas.height - y - 3, 6, 6);
-    ctx.stroke();
-    ctx.fillStyle = '#1e40af';
-    ctx.fillText(key, x + 8, canvas.height - y - 8);
-  });
-  // footer
-  ctx.strokeStyle = '#f59e0b';
-  Object.entries(footerPositions).forEach(([key, [x,y]]) => {
-    ctx.beginPath();
-    ctx.rect(x-3, canvas.height - y - 3, 6, 6);
-    ctx.stroke();
-    ctx.fillStyle = '#92400e';
-    ctx.fillText(key, x + 8, canvas.height - y - 8);
-  });
-  // repeat guides
-  Object.values(repeatRows).forEach(def => {
-    const { startY, deltaY, countPreview = 3 } = def;
-    ctx.strokeStyle = '#10b981';
-    for (let i=0;i<countPreview;i++) {
-      const y = canvas.height - (startY - i*deltaY);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
-  });
-  out.textContent = JSON.stringify(positions, null, 2);
-  repeatOut.textContent = JSON.stringify(repeatRows, null, 2);
-  headerOut.textContent = 'Header: ' + JSON.stringify(headerPositions, null, 2);
-  footerOut.textContent = 'Footer: ' + JSON.stringify(footerPositions, null, 2);
-  stylesOut.textContent = 'Styles: ' + JSON.stringify({ default: defaultStyle, perField: styles }, null, 2);
+let dragging = false;
+let dragTarget = null; // { group: 'fixed'|'header'|'footer'|'image', key }
+let selected = null; // { group, key }
+let resizing = null; // { key, anchor: 'br'|'tl'... }
+let zoom = 1.0;
+let snapEnabled = false;
+let grid = 5;
+
+function displayScale() { return img.naturalWidth > 0 ? (img.naturalWidth / (img.clientWidth || 1)) : 1; }
+function applyZoom() { if (img.naturalWidth > 0) { const targetWidth = Math.max(100, img.naturalWidth / zoom); img.style.width = targetWidth + 'px'; setTimeout(draw, 0);} }
+function snapVal(v) { return Math.round(v / grid) * grid; }
+
+function rebuildList() {
+  function mkList(container, obj, group) {
+    container.innerHTML = '';
+    Object.entries(obj).forEach(([k, v]) => {
+      const row = document.createElement('div');
+      row.className = group==='image' ? 'imgItem' : 'item';
+      const nameI = document.createElement('input'); nameI.type='text'; nameI.value = k; nameI.readOnly = true; nameI.addEventListener('click',()=>{selected={group,key:k}; draw();});
+      const xi = document.createElement('input'); xi.type='number'; xi.step='0.1'; xi.value = v.x ?? v[0] ?? 0;
+      const yi = document.createElement('input'); yi.type='number'; yi.step='0.1'; yi.value = v.y ?? v[1] ?? 0;
+      const del = document.createElement('button'); del.className='del'; del.textContent='×';
+      let wi, hi;
+      if (group==='image') {
+        wi = document.createElement('input'); wi.type='number'; wi.step='1'; wi.value = v.width ?? 100;
+        hi = document.createElement('input'); hi.type='number'; hi.step='1'; hi.value = v.height ?? 100;
+        wi.addEventListener('input',()=>{ images[k].width = Number(wi.value)||0; draw();});
+        hi.addEventListener('input',()=>{ images[k].height = Number(hi.value)||0; draw();});
+      }
+      xi.addEventListener('input', () => { if (group==='image') images[k].x = Number(xi.value)||0; else obj[k][0] = Number(xi.value)||0; draw(); });
+      yi.addEventListener('input', () => { if (group==='image') images[k].y = Number(yi.value)||0; else obj[k][1] = Number(yi.value)||0; draw(); });
+      del.addEventListener('click', () => { if (group==='image') { delete images[k]; delete imagePreviews[k]; } else { delete obj[k]; } if (selected && selected.key===k && selected.group===group) selected=null; rebuildList(); draw(); });
+      row.addEventListener('click', () => { selected = { group, key: k }; draw(); });
+      row.appendChild(nameI); row.appendChild(xi); row.appendChild(yi);
+      if (group==='image') { row.appendChild(wi); row.appendChild(hi); }
+      row.appendChild(del);
+      container.appendChild(row);
+    });
+  }
+  mkList(listFixed, positions, 'fixed');
+  mkList(listHeader, headerPositions, 'header');
+  mkList(listFooter, footerPositions, 'footer');
+  mkList(listImages, images, 'image');
 }
 
-img.onload = draw;
+function drawCrossAt(dx, dy, color, selectedFlag=false) { ctx.save(); ctx.strokeStyle=color; ctx.lineWidth = selectedFlag?2:1.5; const size = selectedFlag?8:6; const y = canvas.height - dy; ctx.beginPath(); ctx.moveTo(dx - size, y); ctx.lineTo(dx + size, y); ctx.moveTo(dx, y - size); ctx.lineTo(dx, y + size); ctx.stroke(); ctx.restore(); }
+
+function draw() {
+  canvas.width = img.clientWidth; canvas.height = img.clientHeight; ctx.clearRect(0,0,canvas.width, canvas.height); const s = displayScale();
+  // fixed
+  Object.entries(positions).forEach(([key, [x,y]]) => { const dx = x / s; const dy = y / s; const isSel = selected && selected.group==='fixed' && selected.key===key; drawCrossAt(dx, dy, '#ef4444', isSel); ctx.fillStyle = '#111827'; ctx.font = '12px sans-serif'; ctx.fillText(key, dx + 6, canvas.height - dy + 3); });
+  // header
+  Object.entries(headerPositions).forEach(([key, [x,y]]) => { const dx = x / s; const dy = y / s; const isSel = selected && selected.group==='header' && selected.key===key; drawCrossAt(dx, dy, '#3b82f6', isSel); ctx.fillStyle = '#1e40af'; ctx.font = '12px sans-serif'; ctx.fillText(key, dx + 6, canvas.height - dy + 3); });
+  // footer
+  Object.entries(footerPositions).forEach(([key, [x,y]]) => { const dx = x / s; const dy = y / s; const isSel = selected && selected.group==='footer' && selected.key===key; drawCrossAt(dx, dy, '#f59e0b', isSel); ctx.fillStyle = '#92400e'; ctx.font = '12px sans-serif'; ctx.fillText(key, dx + 6, canvas.height - dy + 3); });
+  // images
+  Object.entries(images).forEach(([key, meta]) => { const dx = meta.x / s; const dy = meta.y / s; const w = (meta.width||100)/s; const h = (meta.height||100)/s; const y = canvas.height - dy; const isSel = selected && selected.group==='image' && selected.key===key; const dataUrl = imagePreviews[key]; if (dataUrl) { const i = new Image(); i.onload = ()=>{ ctx.drawImage(i, dx, y - h, w, h); if (isSel) { ctx.strokeStyle = '#111827'; ctx.setLineDash([5,3]); ctx.strokeRect(dx, y - h, w, h); ctx.setLineDash([]); } }; i.src = dataUrl; } else { ctx.strokeStyle = '#111827'; ctx.strokeRect(dx, y - h, w, h); } if (isSel) { drawCrossAt(dx, dy, '#111827', true); } ctx.fillStyle = '#111827'; ctx.font='12px sans-serif'; ctx.fillText(key, dx + 6, y - h - 4); });
+  out.textContent = JSON.stringify({positions, images}, null, 2);
+}
+
+img.onload = () => { applyZoom(); rebuildList(); draw(); };
 window.onresize = draw;
 
 function currentStyle() {
@@ -167,46 +225,62 @@ function currentStyle() {
   };
 }
 
-document.getElementById('setDefaultStyle').addEventListener('click', () => {
-  defaultStyle.font = document.getElementById('defaultFont').value || 'Helvetica';
-  defaultStyle.size = parseInt(document.getElementById('defaultSize').value, 10) || 10;
-  defaultStyle.color = document.getElementById('defaultColor').value || '#111111';
-  draw();
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top; const s = displayScale(); const mx = x; const my = canvas.height - y; const hitRadius = 10;
+  function hitPoint(px, py) { return Math.hypot(mx - px, my - py) <= hitRadius; }
+  function hitRect(meta) { const dx = meta.x / s; const dy = meta.y / s; const w = (meta.width||100)/s; const h = (meta.height||100)/s; const left = dx, top = (canvas.height - dy) - h, right = dx + w, bottom = top + h; return mx>=left && mx<=right && y>=top && y<=bottom; }
+  function hit(obj, group) { for (const [k, [px, py]] of Object.entries(obj)) { const dx = px / s; const dy = py / s; if (hitPoint(dx, dy)) return { group, key: k }; } return null; }
+  // priority: images (for resize), then points
+  for (const [k, meta] of Object.entries(images)) {
+    const dx = meta.x / s; const dy = meta.y / s; const w = (meta.width||100)/s; const h = (meta.height||100)/s; const yTop = (canvas.height - dy) - h; const handleSize = 8; const brx = dx + w, bry = yTop + h; if (mx>=brx-handleSize && mx<=brx+handleSize && y>=bry-handleSize && y<=bry+handleSize) { selected = { group:'image', key:k }; resizing = { key:k, anchor:'br' }; draw(); return; } if (hitRect(meta)) { selected = { group:'image', key:k }; dragTarget = { group:'image', key:k }; dragging = true; draw(); return; }
+  }
+  dragTarget = hit(positions, 'fixed') || hit(headerPositions, 'header') || hit(footerPositions, 'footer');
+  selected = dragTarget || selected; dragging = !!dragTarget; draw();
 });
 
-canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const key = document.getElementById('fieldName').value.trim();
-  if (!key) { alert('Escribe un nombre de campo'); return; }
-  const mode = document.getElementById('layerMode').value;
-  const coord = [Math.round(x), Math.round(canvas.height - y)];
-  if (mode === 'header') {
-    headerPositions[key] = coord;
-  } else if (mode === 'footer') {
-    footerPositions[key] = coord;
-  } else {
-    positions[key] = coord;
-    styles[key] = currentStyle();
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top; const s = displayScale();
+  if (resizing) {
+    const meta = images[resizing.key]; if (!meta) { resizing=null; return; }
+    let w = Math.round((x - (meta.x / s)) * s); let h = Math.round(((canvas.height - y) - (canvas.height - (meta.y / s) - (meta.height||100)/s)) * s);
+    if (snapEnabled) { w = snapVal(w); h = snapVal(h); }
+    meta.width = Math.max(10, w); meta.height = Math.max(10, h); draw(); return;
   }
-  draw();
+  if (!dragging || !dragTarget) return;
+  let px = Math.round(x * s); let py = Math.round((canvas.height - y) * s);
+  if (snapEnabled) { px = snapVal(px); py = snapVal(py); }
+  const { group, key } = dragTarget;
+  if (group === 'fixed' && positions[key]) positions[key] = [px, py];
+  if (group === 'header' && headerPositions[key]) headerPositions[key] = [px, py];
+  if (group === 'footer' && footerPositions[key]) footerPositions[key] = [px, py];
+  if (group === 'image' && images[key]) { images[key].x = px; images[key].y = py; }
+  rebuildList(); draw();
+});
+
+canvas.addEventListener('mouseup', () => { dragging = false; dragTarget = null; resizing = null; });
+canvas.addEventListener('mouseleave', () => { dragging = false; dragTarget = null; resizing = null; });
+
+// Keyboard movement
+window.addEventListener('keydown', (e) => {
+  if (!selected) return; const step = e.shiftKey ? 10 : 1; let dx = 0, dy = 0; if (e.key==='ArrowLeft'){dx=-step;e.preventDefault();} if (e.key==='ArrowRight'){dx=step;e.preventDefault();} if (e.key==='ArrowUp'){dy=step;e.preventDefault();} if (e.key==='ArrowDown'){dy=-step;e.preventDefault();} if (dx===0 && dy===0) return; const {group,key}=selected; const obj = group==='fixed'?positions:(group==='header'?headerPositions:(group==='footer'?footerPositions:images)); if (!obj[key]) return; if (group==='image') { let nx=(obj[key].x||0)+dx; let ny=(obj[key].y||0)+dy; if (snapEnabled){nx=snapVal(nx);ny=snapVal(ny);} obj[key].x=nx; obj[key].y=ny; } else { let nx=(obj[key][0]||0)+dx; let ny=(obj[key][1]||0)+dy; if (snapEnabled){nx=snapVal(nx);ny=snapVal(ny);} obj[key]=[nx,ny]; } rebuildList(); draw();
 });
 
 document.getElementById('addFieldBtn').addEventListener('click', () => {
-  const key = document.getElementById('fieldName').value.trim();
-  if (!key) return;
-  const mode = document.getElementById('layerMode').value;
-  const coord = [40, 40];
-  if (mode === 'header') {
-    if (!(key in headerPositions)) headerPositions[key] = coord;
-  } else if (mode === 'footer') {
-    if (!(key in footerPositions)) footerPositions[key] = coord;
+  const key = document.getElementById('fieldName').value.trim(); if (!key) return;
+  const mode = document.getElementById('layerMode').value; const s = displayScale();
+  if (fieldType.value === 'image') {
+    const f = fieldImageFile.files && fieldImageFile.files[0];
+    if (!f) { alert('Elige un archivo de imagen'); return; }
+    const r = new FileReader();
+    r.onload = () => { imagePreviews[key] = r.result; images[key] = { x: Math.round(40*s), y: Math.round(40*s), width: 100, height: 100 }; rebuildList(); draw(); };
+    r.readAsDataURL(f);
   } else {
-    if (!(key in positions)) positions[key] = coord;
-    styles[key] = currentStyle();
+    const coord = [Math.round(40 * s), Math.round(40 * s)];
+    if (mode === 'header') { if (!(key in headerPositions)) headerPositions[key] = coord; }
+    else if (mode === 'footer') { if (!(key in footerPositions)) footerPositions[key] = coord; }
+    else { if (!(key in positions)) positions[key] = coord; styles[key] = currentStyle(); }
+    rebuildList(); draw();
   }
-  draw();
 });
 
 document.getElementById('addRepeatBtn').addEventListener('click', () => {
@@ -216,11 +290,8 @@ document.getElementById('addRepeatBtn').addEventListener('click', () => {
   const rowsPerPage = parseInt(document.getElementById('rowsPerPage').value, 10) || 0;
   const endY = parseInt(document.getElementById('endY').value, 10) || 0;
   if (!arr) { alert('Ruta del array vacía'); return; }
-  const def = { startY, deltaY };
-  if (rowsPerPage > 0) def.rowsPerPage = rowsPerPage;
-  if (endY > 0) def.endY = endY;
-  repeatRows[arr] = def;
-  draw();
+  const def = { startY, deltaY }; if (rowsPerPage > 0) def.rowsPerPage = rowsPerPage; if (endY > 0) def.endY = endY;
+  repeatRows[arr] = def; draw();
 });
 
 document.getElementById('saveBtn').addEventListener('click', async () => {
@@ -231,11 +302,57 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   formData.append('default_style_json', JSON.stringify(defaultStyle));
   formData.append('header_json', JSON.stringify(headerPositions));
   formData.append('footer_json', JSON.stringify(footerPositions));
-  const resp = await fetch('/admin/templates/{{ template.id }}/overlay/save', {
-    method: 'POST', body: formData
-  });
+  formData.append('images_json', JSON.stringify(images));
+  formData.append('image_previews_json', JSON.stringify(imagePreviews));
+  const off = { x: Number(document.getElementById('offsetX').value)||0, y: Number(document.getElementById('offsetY').value)||0 };
+  formData.append('offset_json', JSON.stringify(off));
+  const pscale = Number(document.getElementById('previewScaleInput').value)||previewScale;
+  formData.append('preview_scale', String(pscale));
+  const resp = await fetch('/admin/templates/{{ template.id }}/overlay/save', { method: 'POST', body: formData });
   if (resp.ok) alert('Guardado'); else alert('Error al guardar');
 });
+
+document.getElementById('zoomInput').addEventListener('input', () => {
+  const val = Number(document.getElementById('zoomInput').value) || 1;
+  zoom = Math.max(0.1, val);
+  applyZoom();
+});
+
+document.getElementById('zoomIn').addEventListener('click', () => {
+  zoom = Math.max(0.1, zoom - 0.1);
+  document.getElementById('zoomInput').value = zoom.toFixed(1);
+  applyZoom();
+});
+
+document.getElementById('zoomOut').addEventListener('click', () => {
+  zoom = zoom + 0.1;
+  document.getElementById('zoomInput').value = zoom.toFixed(1);
+  applyZoom();
+});
+
+document.getElementById('centerBtn').addEventListener('click', () => {
+  if (!selected) return;
+  const s = displayScale();
+  const obj = selected.group==='fixed' ? positions : (selected.group==='header' ? headerPositions : footerPositions);
+  const [px, py] = obj[selected.key] || [0,0];
+  const dx = px / s; const dy = py / s; // display coords
+  const cx = dx - viewer.clientWidth / 2;
+  const cy = (canvas.height - dy) - viewer.clientHeight / 2;
+  viewer.scrollLeft = Math.max(0, cx);
+  viewer.scrollTop = Math.max(0, cy);
+});
+
+document.getElementById('snapToggle').addEventListener('change', (e) => {
+  snapEnabled = e.target.checked;
+});
+
+document.getElementById('gridSize').addEventListener('input', (e) => {
+  grid = Math.max(1, Number(e.target.value) || 5);
+});
+
+// Add image from file
+const fieldType = document.getElementById('fieldType');
+const fieldImageFile = document.getElementById('fieldImageFile');
+fieldType.addEventListener('change',()=>{ fieldImageFile.style.display = fieldType.value==='image' ? '' : 'none'; });
 </script>
-</body>
-</html>
+{% endblock %}
