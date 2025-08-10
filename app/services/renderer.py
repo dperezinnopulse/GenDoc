@@ -5,11 +5,14 @@ from typing import Dict, Any, List
 from .template_store import TemplateStore
 from ..utils.soffice import convert_to_pdf
 from ..utils.validation import validate_payload
+from ..utils.pdf_preview import get_preview_scale
 from docxtpl import DocxTemplate
 from openpyxl import load_workbook
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
+from reportlab.lib.utils import ImageReader
 from pypdf import PdfReader, PdfWriter
+import io
 
 
 class Renderer:
@@ -32,6 +35,9 @@ class Renderer:
         if kind == "xlsx":
             return self._render_xlsx_to_pdf(tpl_path, context)
         if kind == "pdf":
+            # Prefer overlay if positions mapping exists; otherwise try AcroForm then fallback
+            if mapping.get("_positions"):
+                return self._render_pdf_overlay(tpl_path, context, original_data=data, mapping=mapping)
             try:
                 return self._render_pdf_acroform(tpl_path, context)
             except Exception:
@@ -116,6 +122,11 @@ class Renderer:
         styles = mapping.get("_styles", {})
         default_style = mapping.get("_default_style", {"font": "Helvetica", "size": 10, "color": "#111111"})
 
+        preview_scale = float(mapping.get("_preview_scale", get_preview_scale()))
+        offset_conf = mapping.get("_offset", {"x": 0, "y": 0})
+        offset_x = float(offset_conf.get("x", 0) or 0)
+        offset_y = float(offset_conf.get("y", 0) or 0)
+
         def apply_style_for_key(key: str):
             style = styles.get(key, default_style)
             font = style.get("font", default_style.get("font", "Helvetica"))
@@ -132,7 +143,14 @@ class Renderer:
 
         def draw_text(key: str, x: float, y: float, value: Any):
             apply_style_for_key(key)
-            c.drawString(float(x), float(y), "" if value is None else str(value))
+            c.drawString(float(x) + offset_x, float(y) + offset_y, "" if value is None else str(value))
+
+        def draw_cross(x: float, y: float, size: float = 4.0):
+            cx = float(x) + offset_x
+            cy = float(y) + offset_y
+            c.setLineWidth(0.5)
+            c.line(cx - size, cy, cx + size, cy)
+            c.line(cx, cy - size, cx, cy + size)
 
         def get_path(d: Dict[str, Any], path: str):
             cur: Any = d
@@ -151,6 +169,27 @@ class Renderer:
             first_page = base_reader.pages[0]
             width = float(first_page.mediabox.width)
             height = float(first_page.mediabox.height)
+
+            def to_pdf_coords(xy: tuple[float, float]) -> tuple[float, float]:
+                # positions are stored in image pixels; preview_scale expresses pixels per PDF point
+                px, py = float(xy[0]), float(xy[1])
+                return (px / preview_scale, py / preview_scale)
+
+            def norm_positions_dict(d: Dict[str, Any]) -> Dict[str, tuple[float, float]]:
+                out = {}
+                for k, v in d.items():
+                    try:
+                        out[k] = to_pdf_coords(v)
+                    except Exception:
+                        out[k] = v
+                return out
+
+            positions_pdf = norm_positions_dict(positions)
+            header_pdf = norm_positions_dict(header_positions)
+            footer_pdf = norm_positions_dict(footer_positions)
+
+            images_cfg = mapping.get("_images", {}) or {}
+            image_previews = mapping.get("_image_previews", {}) or {}
 
             arr_path = None
             arr_def = None
@@ -179,14 +218,14 @@ class Renderer:
             c = canvas.Canvas(overlay_path, pagesize=(width, height))
 
             def draw_header_footer(page_index: int):
-                for key, (x, y) in header_positions.items():
+                for key, (x, y) in header_pdf.items():
                     val = context.get(key)
                     if key == "_page_number":
                         val = str(page_index + 1)
                     if key == "_page_count":
                         val = str(total_pages)
                     draw_text(key, x, y, val)
-                for key, (x, y) in footer_positions.items():
+                for key, (x, y) in footer_pdf.items():
                     val = context.get(key)
                     if key == "_page_number":
                         val = str(page_index + 1)
@@ -200,14 +239,100 @@ class Renderer:
                         continue
                     if arr_path and key.startswith(arr_path + "."):
                         continue
-                    pos = positions.get(key)
+                    pos = positions_pdf.get(key)
                     if pos:
                         x, y = pos
                         draw_text(key, x, y, value)
 
+            def decode_data_url(data_url_or_b64: str | bytes | None) -> bytes | None:
+                if not data_url_or_b64:
+                    return None
+                if isinstance(data_url_or_b64, bytes):
+                    return data_url_or_b64
+                s = str(data_url_or_b64)
+                try:
+                    if s.startswith("data:") and ";base64," in s:
+                        b64 = s.split(",",1)[1]
+                        import base64
+                        return base64.b64decode(b64)
+                    # raw base64
+                    import base64
+                    return base64.b64decode(s)
+                except Exception:
+                    return None
+
+            def draw_images():
+                for key, meta in images_cfg.items():
+                    # choose data: prefer context value, else preview
+                    data_bytes = None
+                    ctx_val = context.get(key)
+                    if ctx_val is not None:
+                        data_bytes = decode_data_url(ctx_val)
+                    if not data_bytes:
+                        data_bytes = decode_data_url(image_previews.get(key))
+                    if not data_bytes:
+                        continue
+                    try:
+                        img_reader = ImageReader(io.BytesIO(data_bytes))
+                    except Exception:
+                        continue
+                    # convert px to pt and apply offset
+                    x_pt = float(meta.get("x", 0.0)) / preview_scale + offset_x
+                    y_pt = float(meta.get("y", 0.0)) / preview_scale + offset_y
+                    w_pt = float(meta.get("width", 100.0)) / preview_scale
+                    h_pt = float(meta.get("height", 100.0)) / preview_scale
+                    # y_pt is the top-left anchor in our coordinate? We defined (x,y) as bottom-left of text; for images, assume (x,y) is bottom-left
+                    # drawImage expects lower-left
+                    c.drawImage(img_reader, x_pt, y_pt - h_pt + h_pt, width=w_pt, height=h_pt, preserveAspectRatio=True, mask='auto')
+
             for page_idx in range(total_pages):
                 draw_header_footer(page_idx)
                 draw_fixed_positions()
+                draw_images()
+                debug_lines = []
+                debug_lines.append(f"scale={preview_scale}, offset=({offset_x:.1f},{offset_y:.1f}), page= {page_idx+1}/{total_pages}, size=({width:.1f},{height:.1f})")
+                # Fixed fields debug
+                for key, (x_pt, y_pt) in positions_pdf.items():
+                    if arr_path and key.startswith(arr_path + "."):
+                        continue
+                    final_x = x_pt + offset_x
+                    final_y = y_pt + offset_y
+                    x_px, y_px = positions.get(key, (None, None))
+                    if x_px is None:
+                        continue
+                    debug_lines.append(f"{key}: px=({x_px:.1f},{y_px:.1f}) -> pt=({x_pt:.1f},{y_pt:.1f}) final=({final_x:.1f},{final_y:.1f})")
+                    # draw crosshair at final position for visual check
+                    draw_cross(x_pt, y_pt)
+                # Repeat rows debug (only if array defined)
+                if arr_path:
+                    start_idx = page_idx * rows_per_page
+                    end_idx = min(len(items), start_idx + rows_per_page)
+                    for idx in range(start_idx, end_idx):
+                        y_item = start_y - (idx - start_idx) * delta_y
+                        prefix = arr_path + "."
+                        for key, (x_pt, y_pt_base) in positions_pdf.items():
+                            if key.startswith(prefix):
+                                final_x = x_pt + offset_x
+                                final_y = y_item + offset_y
+                                x_px, y_px = positions.get(key, (None, None))
+                                if x_px is None:
+                                    continue
+                                debug_lines.append(f"{key}[{idx}]: px=({x_px:.1f},{y_px:.1f}) -> base_pt=({x_pt:.1f},{y_pt_base if isinstance(y_pt_base,(int,float)) else 0:.1f}) y_item={y_item:.1f} final=({final_x:.1f},{final_y:.1f})")
+                                draw_cross(x_pt, y_item)
+                # Draw debug lines in gray at top-left
+                try:
+                    c.setFont("Helvetica", 6)
+                except Exception:
+                    pass
+                try:
+                    c.setFillColor(HexColor("#666666"))
+                except Exception:
+                    pass
+                y_cursor = height - 10
+                for line in debug_lines[:100]:
+                    c.drawString(10, y_cursor, line)
+                    y_cursor -= 8
+                # Draw repeated rows content
                 if arr_path:
                     start_idx = page_idx * rows_per_page
                     end_idx = min(len(items), start_idx + rows_per_page)
@@ -215,7 +340,7 @@ class Renderer:
                         item = items[idx]
                         y_item = start_y - (idx - start_idx) * delta_y
                         prefix = arr_path + "."
-                        for key, (x, _) in positions.items():
+                        for key, (x, _) in positions_pdf.items():
                             if key.startswith(prefix):
                                 sub_key = key[len(prefix):]
                                 val = get_path(item, sub_key)
