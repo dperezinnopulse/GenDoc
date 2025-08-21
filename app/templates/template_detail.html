@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block subnav %}
+<a href="/admin/templates/{{ template.id }}" class="active">Resumen</a>
+<a href="/admin/templates/{{ template.id }}/overlay">Editor visual</a>
+<a href="/admin/templates/{{ template.id }}/markers">Editar marcadores</a>
+<a href="#">Mapeo/Secciones</a>
+<a href="/admin/templates/{{ template.id }}/test_render" target="_blank">Prueba</a>
+{% endblock %}
+{% block content %}
+<div>
+  <h1>{{ template.name }}</h1>
+  <p>Tipo: {{ template.kind }} | ID: {{ template.id }}</p>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+  <h2>Mapeo de campos</h2>
+  <form method="post" action="/admin/templates/{{ template.id }}/save_mapping">
+    <label>Mapping (JSON). Ej: {"nombre": "alumno.nombre"}</label>
+    <textarea name="mapping_json" rows="6" style="width:100%;">{{ template.mapping | tojson(indent=2) }}</textarea>
+
+    <label>Secciones repetidas (JSON)</label>
+    <textarea name="repeat_json" rows="6" style="width:100%;">{{ template.repeat_sections | tojson(indent=2) }}</textarea>
+
+    <label>Schema de validación (JSON Schema)</label>
+    <textarea name="schema_json" rows="10" style="width:100%;">{{ template.schema | tojson(indent=2) }}</textarea>
+
+    <button type="submit">Guardar</button>
+  </form>
+
+  <h2>Prueba de render</h2>
+  <form method="post" action="/admin/templates/{{ template.id }}/test_render" target="_blank">
+    <label>Datos (JSON)</label>
+    <textarea name="data_json" rows="12" style="width:100%;">{{ suggested_data or '{\n  "nombre": "Ana"\n}' }}</textarea>
+    <button type="submit">Generar PDF</button>
+  </form>
+</div>
+{% endblock %}

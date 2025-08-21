@@ -1,0 +1,89 @@
+﻿<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PDFGen - Editar marcadores</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 6px; border-bottom: 1px solid #eee; }
+    input[type=text], input[type=number] { width: 100%; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/admin/templates/{{ template.id }}">← Volver</a>
+    <h1>Editar marcadores: {{ template.name }}</h1>
+
+    <form method="post" action="/admin/templates/{{ template.id }}/markers">
+      <h2>Campos fijos</h2>
+      <table>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th></tr></thead>
+        <tbody id="fixedBody">
+          {% for k, v in positions.items() %}
+          {% if not k.startswith('_') %}
+          <tr>
+            <td><input type="text" name="name[]" value="{{ k }}" /></td>
+            <td><input type="number" name="x[]" step="0.1" value="{{ v[0] }}" /></td>
+            <td><input type="number" name="y[]" step="0.1" value="{{ v[1] }}" /></td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+          <tr>
+            <td><input type="text" name="name[]" placeholder="Nuevo" /></td>
+            <td><input type="number" name="x[]" step="0.1" /></td>
+            <td><input type="number" name="y[]" step="0.1" /></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Cabecera</h2>
+      <table>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th></tr></thead>
+        <tbody>
+          {% for k, v in header_positions.items() %}
+          <tr>
+            <td><input type="text" name="hname[]" value="{{ k }}" /></td>
+            <td><input type="number" name="hx[]" step="0.1" value="{{ v[0] }}" /></td>
+            <td><input type="number" name="hy[]" step="0.1" value="{{ v[1] }}" /></td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td><input type="text" name="hname[]" placeholder="Nuevo" /></td>
+            <td><input type="number" name="hx[]" step="0.1" /></td>
+            <td><input type="number" name="hy[]" step="0.1" /></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Pie</h2>
+      <table>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th></tr></thead>
+        <tbody>
+          {% for k, v in footer_positions.items() %}
+          <tr>
+            <td><input type="text" name="fname[]" value="{{ k }}" /></td>
+            <td><input type="number" name="fx[]" step="0.1" value="{{ v[0] }}" /></td>
+            <td><input type="number" name="fy[]" step="0.1" value="{{ v[1] }}" /></td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td><input type="text" name="fname[]" placeholder="Nuevo" /></td>
+            <td><input type="number" name="fx[]" step="0.1" /></td>
+            <td><input type="number" name="fy[]" step="0.1" /></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:16px;">
+        <button type="submit">Guardar</button>
+      </div>
+      <h2>Estilos por defecto</h2>
+      <table>
+        <tr><td><label>Color de Fondo:</label></td><td><input type="color" name="bgColor" value="#ffffff" /></td></tr>
+        <tr><td><label>Color de Texto:</label></td><td><input type="color" name="textColor" value="#111111" /></td></tr>
+      </table>
+    </form>
+  </div>
+</body>
+</html>

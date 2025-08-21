@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.build/
+
+# Envs
+.env
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# App storage
+storage/templates/*
+!storage/templates/.gitkeep
+
+# Caches
+*.log
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
