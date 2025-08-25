@@ -1,0 +1,9 @@
+{
+  "nombre": "Ana García",
+  "documento": "12345678",
+  "fecha": "2025-01-15",
+  "logo_empresa": "https://via.placeholder.com/200x80/0066cc/ffffff?text=Empresa",
+  "foto_perfil": "https://via.placeholder.com/100x100/ff6b6b/ffffff?text=Foto",
+  "qr_code": "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://ejemplo.com",
+  "imagen_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+}

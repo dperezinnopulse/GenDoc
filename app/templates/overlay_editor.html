@@ -41,6 +41,9 @@
       <option value="image">Imagen</option>
     </select>
     <input type="file" id="fieldImageFile" accept="image/*" style="display:none;" />
+    <div id="imageUrlInfo" style="display:none; font-size:12px; color:#666; margin-top:4px;">
+      💡 También puedes usar URLs de imagen (https://...) en los datos JSON
+    </div>
     <label>Fuente</label>
     <input type="text" id="fontName" value="Helvetica" />
     <label>Tamaño</label>
@@ -353,6 +356,9 @@ document.getElementById('gridSize').addEventListener('input', (e) => {
 // Add image from file
 const fieldType = document.getElementById('fieldType');
 const fieldImageFile = document.getElementById('fieldImageFile');
-fieldType.addEventListener('change',()=>{ fieldImageFile.style.display = fieldType.value==='image' ? '' : 'none'; });
+fieldType.addEventListener('change',()=>{ 
+    fieldImageFile.style.display = fieldType.value==='image' ? '' : 'none'; 
+    document.getElementById('imageUrlInfo').style.display = fieldType.value==='image' ? '' : 'none';
+});
 </script>
 {% endblock %}

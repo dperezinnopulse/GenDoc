@@ -26,6 +26,19 @@
     <button type="submit">Guardar</button>
   </form>
 
+  {% if template.mapping._images %}
+  <h2>Campos de imagen</h2>
+  <div style="background:#f7fafc; padding:12px; border-radius:8px; margin:12px 0;">
+    <p><strong>Campos de imagen configurados:</strong></p>
+    <ul>
+    {% for key, meta in template.mapping._images.items() %}
+      <li><strong>{{ key }}</strong>: Posición ({{ meta.x }}, {{ meta.y }}), Tamaño {{ meta.width }}x{{ meta.height }}</li>
+    {% endfor %}
+    </ul>
+    <p><small>💡 Los campos de imagen aceptan URLs (https://...) o imágenes base64. Se pueden editar en el <a href="/admin/templates/{{ template.id }}/overlay">Editor visual</a> o en <a href="/admin/templates/{{ template.id }}/markers">Editar marcadores</a>.</small></p>
+  </div>
+  {% endif %}
+
   <h2>Prueba de render</h2>
   <form method="post" action="/admin/templates/{{ template.id }}/test_render" target="_blank">
     <label>Datos (JSON)</label>

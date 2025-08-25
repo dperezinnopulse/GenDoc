@@ -266,16 +266,59 @@ class Renderer:
                     # choose data: prefer context value, else preview
                     data_bytes = None
                     ctx_val = context.get(key)
+                    
                     if ctx_val is not None:
-                        data_bytes = decode_data_url(ctx_val)
+                        # Check if it's a URL
+                        if isinstance(ctx_val, str) and (ctx_val.startswith('http://') or ctx_val.startswith('https://')):
+                            try:
+                                import requests
+                                print(f"📥 Descargando imagen desde: {ctx_val}")
+                                response = requests.get(ctx_val, timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
+                                print(f"📊 Status: {response.status_code}, Content-Type: {response.headers.get('content-type', 'N/A')}")
+                                
+                                if response.status_code == 200:
+                                    content_type = response.headers.get('content-type', '').lower()
+                                    
+                                    # Handle SVG files - convert to PNG or skip
+                                    if 'svg' in content_type:
+                                        # For SVG, try to convert or use a fallback
+                                        try:
+                                            # Try to convert SVG to PNG using cairosvg if available
+                                            import cairosvg
+                                            png_data = cairosvg.svg2png(bytestring=response.content)
+                                            data_bytes = png_data
+                                            print(f"✅ SVG convertido a PNG para {key}: {len(png_data)} bytes")
+                                        except ImportError:
+                                            # If cairosvg not available, skip SVG files
+                                            print(f"⚠️ SVG no soportado para {key}, saltando")
+                                            continue
+                                    else:
+                                        # For other image types, use as-is
+                                        data_bytes = response.content
+                                        print(f"✅ Imagen descargada para {key}: {len(data_bytes)} bytes")
+                                else:
+                                    print(f"❌ Error HTTP: {response.status_code}")
+                                    continue
+                            except Exception as e:
+                                print(f"❌ Error descargando imagen para {key}: {e}")
+                                continue
+                        else:
+                            # Try as data URL
+                            data_bytes = decode_data_url(ctx_val)
+                    
                     if not data_bytes:
                         data_bytes = decode_data_url(image_previews.get(key))
+                    
                     if not data_bytes:
                         continue
+                    
                     try:
                         img_reader = ImageReader(io.BytesIO(data_bytes))
-                    except Exception:
+                        print(f"✅ Imagen cargada para {key}: {img_reader.getSize()}")
+                    except Exception as e:
+                        print(f"❌ Error cargando imagen para {key}: {e}")
                         continue
+                    
                     # convert px to pt and apply offset
                     x_pt = float(meta.get("x", 0.0)) / preview_scale + offset_x
                     y_pt = float(meta.get("y", 0.0)) / preview_scale + offset_y
@@ -283,7 +326,12 @@ class Renderer:
                     h_pt = float(meta.get("height", 100.0)) / preview_scale
                     # y_pt is the top-left anchor in our coordinate? We defined (x,y) as bottom-left of text; for images, assume (x,y) is bottom-left
                     # drawImage expects lower-left
-                    c.drawImage(img_reader, x_pt, y_pt - h_pt + h_pt, width=w_pt, height=h_pt, preserveAspectRatio=True, mask='auto')
+                    try:
+                        c.drawImage(img_reader, x_pt, y_pt - h_pt + h_pt, width=w_pt, height=h_pt, preserveAspectRatio=True, mask='auto')
+                        print(f"✅ Imagen dibujada para {key} en ({x_pt:.1f}, {y_pt:.1f}) tamaño {w_pt:.1f}x{h_pt:.1f}")
+                    except Exception as e:
+                        print(f"❌ Error dibujando imagen para {key}: {e}")
+                        continue
 
             for page_idx in range(total_pages):
                 draw_header_footer(page_idx)

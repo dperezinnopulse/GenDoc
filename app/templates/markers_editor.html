@@ -18,7 +18,7 @@
     <form method="post" action="/admin/templates/{{ template.id }}/markers">
       <h2>Campos fijos</h2>
       <table>
-        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Tipo</th></tr></thead>
         <tbody id="fixedBody">
           {% for k, v in positions.items() %}
           {% if not k.startswith('_') %}
@@ -26,6 +26,10 @@
             <td><input type="text" name="name[]" value="{{ k }}" /></td>
             <td><input type="number" name="x[]" step="0.1" value="{{ v[0] }}" /></td>
             <td><input type="number" name="y[]" step="0.1" value="{{ v[1] }}" /></td>
+            <td><select name="type[]">
+              <option value="text" selected>Texto</option>
+              <option value="image">Imagen</option>
+            </select></td>
           </tr>
           {% endif %}
           {% endfor %}
@@ -33,6 +37,33 @@
             <td><input type="text" name="name[]" placeholder="Nuevo" /></td>
             <td><input type="number" name="x[]" step="0.1" /></td>
             <td><input type="number" name="y[]" step="0.1" /></td>
+            <td><select name="type[]">
+              <option value="text" selected>Texto</option>
+              <option value="image">Imagen</option>
+            </select></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Campos de imagen</h2>
+      <table>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Ancho</th><th>Alto</th></tr></thead>
+        <tbody>
+          {% for k, v in images.items() %}
+          <tr>
+            <td><input type="text" name="img_name[]" value="{{ k }}" /></td>
+            <td><input type="number" name="img_x[]" step="0.1" value="{{ v.x }}" /></td>
+            <td><input type="number" name="img_y[]" step="0.1" value="{{ v.y }}" /></td>
+            <td><input type="number" name="img_width[]" step="1" value="{{ v.width }}" /></td>
+            <td><input type="number" name="img_height[]" step="1" value="{{ v.height }}" /></td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td><input type="text" name="img_name[]" placeholder="Nuevo" /></td>
+            <td><input type="number" name="img_x[]" step="0.1" /></td>
+            <td><input type="number" name="img_y[]" step="0.1" /></td>
+            <td><input type="number" name="img_width[]" step="1" value="100" /></td>
+            <td><input type="number" name="img_height[]" step="1" value="100" /></td>
           </tr>
         </tbody>
       </table>

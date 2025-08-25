@@ -22,7 +22,7 @@ templates_env = Environment(
     autoescape=select_autoescape(["html", "xml"]),
 )
 
-store = TemplateStore(base_path="/workspace/pdfgen/storage/templates")
+store = TemplateStore(base_path="storage/templates")
 renderer = Renderer(store)
 
 
@@ -48,6 +48,9 @@ def _sample_value_for(field_name: str) -> str:
         return "2025-09-01"
     if "curso" in low:
         return "Matemáticas"
+    if "imagen" in low or "foto" in low or "logo" in low or "imagen" in low:
+        # Return URL example for image fields
+        return "https://via.placeholder.com/150x100/0066cc/ffffff?text=Logo"
     return "Texto"
 
 
@@ -134,6 +137,12 @@ async def view_template(template_id: str, user: str = Depends(require_user)):
             continue
         if k not in sample:
             sample[k] = _sample_value_for(k)
+    
+    # Include image fields from _images mapping
+    images_cfg = mapping.get("_images", {}) or {}
+    for img_key in images_cfg.keys():
+        if img_key not in sample:
+            sample[img_key] = _sample_value_for(img_key)
 
     # Fallbacks if still empty: inspect template to propose fields
     if not sample:
@@ -415,17 +424,20 @@ async def markers_editor(template_id: str, user: str = Depends(require_user)):
     positions = mapping.get("_positions", {}) or {}
     header_positions = mapping.get("_header_positions", {}) or {}
     footer_positions = mapping.get("_footer_positions", {}) or {}
+    images = mapping.get("_images", {}) or {}
     template = templates_env.get_template("markers_editor.html")
-    return template.render(user=user, template=template_meta, positions=positions, header_positions=header_positions, footer_positions=footer_positions)
+    return template.render(user=user, template=template_meta, positions=positions, header_positions=header_positions, footer_positions=footer_positions, images=images)
 
 @router.post("/admin/templates/{template_id}/markers")
 async def save_markers(template_id: str, request: Request, user: str = Depends(require_user)):
     form = await request.form()
     mapping = _normalize_mapping(store.get_template_meta(template_id).get("mapping", {}))
+    
     # Collect fixed markers
     names = form.getlist("name[]")
     xs = form.getlist("x[]")
     ys = form.getlist("y[]")
+    types = form.getlist("type[]")
     new_positions: dict[str, list[float]] = {}
     for i in range(len(names)):
         k = (names[i] or "").strip()
@@ -437,6 +449,27 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
         except Exception:
             continue
         new_positions[k] = [x, y]
+    
+    # Collect image markers
+    img_names = form.getlist("img_name[]")
+    img_xs = form.getlist("img_x[]")
+    img_ys = form.getlist("img_y[]")
+    img_widths = form.getlist("img_width[]")
+    img_heights = form.getlist("img_height[]")
+    new_images: dict[str, dict] = {}
+    for i in range(len(img_names)):
+        k = (img_names[i] or "").strip()
+        if not k:
+            continue
+        try:
+            x = float(img_xs[i])
+            y = float(img_ys[i])
+            width = float(img_widths[i])
+            height = float(img_heights[i])
+        except Exception:
+            continue
+        new_images[k] = {"x": x, "y": y, "width": width, "height": height}
+    
     # Header markers
     h_names = form.getlist("hname[]")
     h_xs = form.getlist("hx[]")
@@ -452,6 +485,7 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
         except Exception:
             continue
         new_header[k] = [x, y]
+    
     # Footer markers
     f_names = form.getlist("fname[]")
     f_xs = form.getlist("fx[]")
@@ -471,6 +505,7 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
     mapping["_positions"] = new_positions
     mapping["_header_positions"] = new_header
     mapping["_footer_positions"] = new_footer
+    mapping["_images"] = new_images
 
     meta = store.get_template_meta(template_id)
     store.save_mapping(template_id, mapping, meta.get("repeat_sections", {}), meta.get("schema", {}))
