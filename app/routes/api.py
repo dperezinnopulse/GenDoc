@@ -177,14 +177,14 @@ async def render_document(req: RenderRequest):
         mapping = meta.get("mapping", {})
         signatures_cfg = mapping.get("_signatures", {}) or {}
         
-        # Render PDF asynchronously
-        pdf_bytes = await renderer.render_to_pdf_async(req.template_id, req.data)
+        # Render PDF synchronously
+        pdf_bytes = renderer.render_to_pdf(req.template_id, req.data)
         
         # Handle different output formats
         if req.output_format == "image":
             print("🖼️  DEBUG: Converting PDF to image...")
             # Convert PDF to image
-            image_bytes = await renderer.convert_pdf_to_image(pdf_bytes)
+            image_bytes = renderer.convert_pdf_to_image(pdf_bytes)
             print(f"🖼️  DEBUG: Image conversion complete, size: {len(image_bytes)} bytes")
             
             # Prepare response with image and signature coordinates

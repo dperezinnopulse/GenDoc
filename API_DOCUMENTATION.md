@@ -35,53 +35,44 @@ Content-Type: application/json
 - **`template_id`** (string, requerido): ID único de la plantilla
 - **`data`** (object, requerido): Datos a insertar en la plantilla
 - **`output_format`** (string, opcional): 
-  - `"pdf"` (por defecto): Devuelve PDF
-  - `"image"`: Devuelve imagen PNG con coordenadas de firma
+  - `"pdf"` (por defecto): Devuelve documento PDF
+  - `"image"`: Devuelve imagen optimizada con coordenadas de firma
 
 ---
 
 ## 📤 Respuestas
 
-### 1. Formato PDF (`output_format: "pdf"`)
+### Para `output_format: "pdf"`
 
-#### Sin campos de firma:
-```http
-Content-Type: application/pdf
-```
-Devuelve directamente el archivo PDF.
+**Content-Type:** `application/pdf` o `application/json`
 
-#### Con campos de firma:
 ```json
 {
-  "pdf_base64": "base64_encoded_pdf_content",
+  "pdf_base64": "JVBERi0xLjQKJcOkw7zDtsO...",
   "signatures": {
-    "firma_alumno": {
-      "x": 351,
-      "y": 107,
-      "width": 200,
-      "height": 100
-    },
-    "firma_profesor": {
-      "x": 500,
+    "firma1": {
+      "x": 100,
       "y": 200,
-      "width": 200,
-      "height": 100
+      "width": 150,
+      "height": 50
     }
   }
 }
 ```
 
-### 2. Formato Imagen (`output_format: "image"`)
+### Para `output_format: "image"`
+
+**Content-Type:** `application/json`
 
 ```json
 {
-  "image_base64": "base64_encoded_png_content",
+  "image_base64": "UklGRiQAAABXRUJQVlA4IBgAAAAwAQCgASgBAAAD...",
   "signatures": {
-    "firma_alumno": {
-      "x": 351,
-      "y": 107,
-      "width": 200,
-      "height": 100
+    "firma1": {
+      "x": 100,
+      "y": 200,
+      "width": 150,
+      "height": 50
     }
   }
 }
@@ -89,83 +80,59 @@ Devuelve directamente el archivo PDF.
 
 ---
 
-## 📍 Estructura de Coordenadas de Firma
+## 🖼️ Optimización de Imágenes
 
-### Formato de Coordenadas
-```json
-{
-  "nombre_campo": {
-    "x": 351,        // Posición X en píxeles
-    "y": 107,        // Posición Y en píxeles  
-    "width": 200,    // Ancho del área de firma
-    "height": 100    // Alto del área de firma
-  }
-}
-```
+### ✨ Características de la Optimización Avanzada
 
-### Sistema de Coordenadas
-- **Origen**: Esquina superior izquierda (0,0)
-- **Unidades**: Píxeles
-- **X**: Distancia desde el borde izquierdo
-- **Y**: Distancia desde el borde superior
+La API utiliza un **algoritmo de optimización avanzado** que incluye:
+
+1. **Formato WebP**: Mejor compresión que PNG/JPEG
+2. **Modo Documento**: Escala de grises + nitidez para texto nítido
+3. **Búsqueda Binaria**: Encuentra la calidad óptima automáticamente
+4. **Limpieza de Metadatos**: Elimina EXIF/ICC para reducir peso
+5. **Redimensionado Inteligente**: Máximo 1600px manteniendo proporción
+
+### 📊 Especificaciones Técnicas
+
+- **Tamaño objetivo**: ~260KB (20% más calidad)
+- **Formato**: WebP (con fallback a JPEG)
+- **Calidad**: Optimizada automáticamente
+- **Resolución máxima**: 1600x1600 píxeles
+- **Color**: Mantenido (no escala de grises)
+- **Modo documento**: Desactivado para preservar colores
 
 ---
 
-## 💻 Ejemplos de Uso
+## 📝 Ejemplos de Uso
 
 ### Ejemplo 1: Generar PDF
-```javascript
-const response = await fetch('https://a83581047e68.ngrok-free.app/api/render', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    template_id: "4beba2ce11614d36bd066809e2f52115",
-    data: {
+```bash
+curl -X POST "https://a83581047e68.ngrok-free.app/api/render" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_id": "4beba2ce11614d36bd066809e2f52115",
+    "data": {
       "Alumno": "Diego Pérez Donoso",
       "Documento": "12345",
       "Fecha": "2025-08-26"
     },
-    output_format: "pdf"
-  })
-});
-
-const result = await response.json();
-// result.pdf_base64 contiene el PDF en base64
-// result.signatures contiene las coordenadas de firma
+    "output_format": "pdf"
+  }'
 ```
 
-### Ejemplo 2: Generar Imagen con Coordenadas de Firma
-```javascript
-const response = await fetch('https://a83581047e68.ngrok-free.app/api/render', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    template_id: "4beba2ce11614d36bd066809e2f52115",
-    data: {
+### Ejemplo 2: Generar Imagen Optimizada
+```bash
+curl -X POST "https://a83581047e68.ngrok-free.app/api/render" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_id": "4beba2ce11614d36bd066809e2f52115",
+    "data": {
       "Alumno": "Diego Pérez Donoso",
       "Documento": "12345",
       "Fecha": "2025-08-26"
     },
-    output_format: "image"
-  })
-});
-
-const result = await response.json();
-
-// Decodificar imagen
-const imageData = atob(result.image_base64);
-const imageBlob = new Blob([imageData], { type: 'image/png' });
-
-// Usar coordenadas de firma
-const signatures = result.signatures;
-for (const [fieldName, coords] of Object.entries(signatures)) {
-  console.log(`Campo ${fieldName}: x=${coords.x}, y=${coords.y}`);
-  // Aquí puedes posicionar elementos de firma en tu UI
-}
+    "output_format": "image"
+  }'
 ```
 
 ### Ejemplo 3: Python
@@ -173,6 +140,7 @@ for (const [fieldName, coords] of Object.entries(signatures)) {
 import requests
 import base64
 
+# Configuración
 url = "https://a83581047e68.ngrok-free.app/api/render"
 payload = {
     "template_id": "4beba2ce11614d36bd066809e2f52115",
@@ -184,25 +152,54 @@ payload = {
     "output_format": "image"
 }
 
+# Llamada a la API
 response = requests.post(url, json=payload)
-result = response.json()
 
-# Decodificar imagen
-image_data = base64.b64decode(result['image_base64'])
-with open('documento.png', 'wb') as f:
-    f.write(image_data)
-
-# Usar coordenadas de firma
-signatures = result['signatures']
-for field_name, coords in signatures.items():
-    print(f"Campo {field_name}: x={coords['x']}, y={coords['y']}")
+if response.status_code == 200:
+    result = response.json()
+    
+    # Guardar imagen
+    image_data = base64.b64decode(result["image_base64"])
+    with open("documento.png", "wb") as f:
+        f.write(image_data)
+    
+    # Procesar coordenadas de firma
+    signatures = result["signatures"]
+    for key, coords in signatures.items():
+        print(f"Campo {key}: x={coords['x']}, y={coords['y']}")
+else:
+    print(f"Error: {response.status_code}")
 ```
 
 ---
 
-## 🔧 Configuración de Campos de Firma
+## 🔧 Códigos de Estado HTTP
 
-Para que una plantilla incluya coordenadas de firma, debe tener configurados campos de firma en su metadata:
+- **200 OK**: Operación exitosa
+- **400 Bad Request**: Datos de entrada inválidos
+- **404 Not Found**: Plantilla no encontrada
+- **500 Internal Server Error**: Error interno del servidor
+
+---
+
+## 📋 Campos de Firma
+
+### Estructura de Coordenadas
+```json
+{
+  "signatures": {
+    "nombre_campo": {
+      "x": 100,        // Posición X en píxeles
+      "y": 200,        // Posición Y en píxeles
+      "width": 150,    // Ancho del campo en píxeles
+      "height": 50     // Alto del campo en píxeles
+    }
+  }
+}
+```
+
+### Configuración en Plantillas
+Los campos de firma se configuran en el archivo `meta.json` de cada plantilla:
 
 ```json
 {
@@ -213,12 +210,6 @@ Para que una plantilla incluya coordenadas de firma, debe tener configurados cam
         "y": 107,
         "width": 200,
         "height": 100
-      },
-      "firma_profesor": {
-        "x": 500,
-        "y": 200,
-        "width": 200,
-        "height": 100
       }
     }
   }
@@ -227,36 +218,25 @@ Para que una plantilla incluya coordenadas de firma, debe tener configurados cam
 
 ---
 
-## ⚠️ Códigos de Error
+## 🚀 Mejoras Recientes (v2.1.0)
 
-| Código | Descripción |
-|--------|-------------|
-| 200 | ✅ Éxito |
-| 400 | ❌ Error en los datos de entrada |
-| 404 | ❌ Plantilla no encontrada |
-| 500 | ❌ Error interno del servidor |
+### ✅ Optimización de Imágenes Avanzada
+- **Algoritmo inteligente**: Búsqueda binaria de calidad óptima
+- **Formato WebP**: Mejor compresión y calidad
+- **Color preservado**: No se convierte a escala de grises
+- **Calidad aumentada**: 20% más calidad que la versión anterior
+- **Tamaño optimizado**: ~260KB con excelente calidad visual
 
----
-
-## 📝 Notas Importantes
-
-1. **Formato de Imagen**: Las imágenes se devuelven en formato PNG
-2. **Codificación**: Tanto PDF como imágenes se devuelven en base64
-3. **Coordenadas**: Las coordenadas están en píxeles y son relativas al documento
-4. **Campos de Firma**: Solo se incluyen si están configurados en la plantilla
-5. **Tamaño**: Las imágenes mantienen la resolución original del PDF
-
----
-
-## 🧪 Plantillas de Prueba
-
-### Template ID: `4beba2ce11614d36bd066809e2f52115`
-- **Tipo**: PDF
-- **Campos**: Alumno, Documento, Fecha, Logotipo
-- **Campos de Firma**: Configurados según metadata
+### ✅ Rendimiento Mejorado
+- **Conversión más rápida**: Algoritmos optimizados
+- **Menor uso de memoria**: Procesamiento eficiente
+- **Mejor calidad visual**: Texto más nítido y legible
 
 ---
 
 ## 📞 Soporte
 
-Para dudas o problemas, contactar al equipo de desarrollo de GenDoc.
+Para soporte técnico o consultas sobre la API, contacta al equipo de desarrollo.
+
+**Versión actual:** 2.1.0  
+**Última actualización:** Agosto 2025

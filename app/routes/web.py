@@ -223,14 +223,8 @@ async def test_render(template_id: str, data_json: str = Form("{}"), format: str
         if format == "image":
             # Generar imagen PNG
             pdf_bytes = renderer.render_to_pdf(template_id, data)
-            # Usar un executor para la conversión síncrona
-            loop = asyncio.get_event_loop()
-            with ThreadPoolExecutor() as executor:
-                image_bytes = await loop.run_in_executor(
-                    executor, 
-                    renderer._convert_pdf_to_image_sync, 
-                    pdf_bytes
-                )
+            # Convertir PDF a imagen optimizada
+            image_bytes = renderer.convert_pdf_to_image(pdf_bytes)
             return StreamingResponse(
                 io.BytesIO(image_bytes), 
                 media_type="image/png", 
@@ -326,14 +320,8 @@ async def test_render_get(template_id: str, format: str = Query("pdf"), user: st
     if format == "image":
         # Generar imagen PNG
         pdf_bytes = renderer.render_to_pdf(template_id, sample)
-        # Usar un executor para la conversión síncrona
-        loop = asyncio.get_event_loop()
-        with ThreadPoolExecutor() as executor:
-            image_bytes = await loop.run_in_executor(
-                executor, 
-                renderer._convert_pdf_to_image_sync, 
-                pdf_bytes
-            )
+        # Convertir PDF a imagen optimizada
+        image_bytes = renderer.convert_pdf_to_image(pdf_bytes)
         return StreamingResponse(
             io.BytesIO(image_bytes), 
             media_type="image/png", 

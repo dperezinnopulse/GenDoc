@@ -4,7 +4,8 @@
 <a href="/admin/templates/{{ template.id }}/overlay">Editor visual</a>
 <a href="/admin/templates/{{ template.id }}/markers">Editar marcadores</a>
 <a href="#">Mapeo/Secciones</a>
-<a href="/admin/templates/{{ template.id }}/test_render" target="_blank">Prueba</a>
+<a href="/admin/templates/{{ template.id }}/test_render" target="_blank">Prueba PDF</a>
+<a href="/admin/templates/{{ template.id }}/test_render?format=image" target="_blank">Prueba PNG</a>
 {% endblock %}
 {% block content %}
 <div>
@@ -43,7 +44,10 @@
   <form method="post" action="/admin/templates/{{ template.id }}/test_render" target="_blank">
     <label>Datos (JSON)</label>
     <textarea name="data_json" rows="12" style="width:100%;">{{ suggested_data or '{\n  "nombre": "Ana"\n}' }}</textarea>
-    <button type="submit">Generar PDF</button>
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <button type="submit" name="format" value="pdf">Generar PDF</button>
+      <button type="submit" name="format" value="image">Generar PNG</button>
+    </div>
   </form>
 </div>
 {% endblock %}
