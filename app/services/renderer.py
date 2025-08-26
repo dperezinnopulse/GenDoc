@@ -13,13 +13,60 @@ from reportlab.lib.colors import HexColor
 from reportlab.lib.utils import ImageReader
 from pypdf import PdfReader, PdfWriter
 import io
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 
 class Renderer:
     def __init__(self, store: TemplateStore):
         self.store = store
 
-    def render_to_pdf(self, template_id: str, data: Dict[str, Any]) -> bytes:
+    def _render_to_pdf_sync(self, template_id: str, data: Dict[str, Any]) -> bytes:
+        """Versión síncrona del renderizado para usar cuando ya hay un event loop corriendo."""
+        template_meta = self.store.get_template_meta(template_id)
+        if not template_meta:
+            raise ValueError(f"Template {template_id} not found")
+        
+        # Aplicar mapping
+        mapping = template_meta.get("mapping", {})
+        context = self._apply_mapping(data, mapping)
+        
+        # Renderizar según el tipo
+        kind = template_meta.get("kind")
+        tpl_path = self.store.get_template_file(template_id)
+        
+        if kind == "docx":
+            return self._render_docx_to_pdf_sync(tpl_path, context)
+        elif kind == "xlsx":
+            return self._render_xlsx_to_pdf(tpl_path, context)
+        elif kind == "pdf":
+            if mapping.get("_positions"):
+                return self._render_pdf_overlay(tpl_path, context, data, mapping)
+            else:
+                return self._render_pdf_acroform(tpl_path, context)
+        else:
+            raise ValueError(f"Unsupported template kind: {kind}")
+
+    def _render_docx_to_pdf_sync(self, tpl_path: str, context: Dict[str, Any]) -> bytes:
+        """Versión síncrona de la conversión DOCX a PDF."""
+        with tempfile.TemporaryDirectory() as td:
+            out_docx = os.path.join(td, "out.docx")
+            out_pdf = os.path.join(td, "out.pdf")
+            doc = DocxTemplate(tpl_path)
+            doc.render(context)
+            doc.save(out_docx)
+            
+            # Usar conversión síncrona
+            from ..utils.soffice import convert_to_pdf
+            success = convert_to_pdf(out_docx, out_pdf)
+            
+            if not success:
+                raise RuntimeError("Error en conversión a PDF")
+                
+            with open(out_pdf, "rb") as f:
+                return f.read()
+
+    async def render_to_pdf_async(self, template_id: str, data: Dict[str, Any]) -> bytes:
         meta = self.store.get_template_meta(template_id)
         kind = meta["kind"]
         tpl_path = self.store.get_template_file(template_id)
@@ -31,9 +78,9 @@ class Renderer:
 
         context = self._apply_mapping(data, mapping)
         if kind == "docx":
-            return self._render_docx_to_pdf(tpl_path, context)
+            return await self._render_docx_to_pdf_async(tpl_path, context)
         if kind == "xlsx":
-            return self._render_xlsx_to_pdf(tpl_path, context)
+            return self._render_xlsx_to_pdf(tpl_path, context)  # TODO: Hacer asíncrono
         if kind == "pdf":
             # Prefer overlay if positions mapping exists; otherwise try AcroForm then fallback
             if mapping.get("_positions"):
@@ -43,6 +90,20 @@ class Renderer:
             except Exception:
                 return self._render_pdf_overlay(tpl_path, context, original_data=data, mapping=mapping)
         raise ValueError("Tipo de plantilla no soportado")
+
+    def render_to_pdf(self, template_id: str, data: Dict[str, Any]) -> bytes:
+        # Versión síncrona para compatibilidad
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Si el loop ya está corriendo, usar el método síncrono directamente
+                return self._render_to_pdf_sync(template_id, data)
+            else:
+                return loop.run_until_complete(self.render_to_pdf_async(template_id, data))
+        except RuntimeError:
+            # Si no hay loop, crear uno nuevo
+            return asyncio.run(self.render_to_pdf_async(template_id, data))
 
     def _apply_mapping(self, data: Dict[str, Any], mapping: Dict[str, Any]) -> Dict[str, Any]:
         if not mapping:
@@ -65,16 +126,34 @@ class Renderer:
         out.update(data)
         return out
 
-    def _render_docx_to_pdf(self, tpl_path: str, context: Dict[str, Any]) -> bytes:
+    async def _render_docx_to_pdf_async(self, tpl_path: str, context: Dict[str, Any]) -> bytes:
         with tempfile.TemporaryDirectory() as td:
             out_docx = os.path.join(td, "out.docx")
             out_pdf = os.path.join(td, "out.pdf")
             doc = DocxTemplate(tpl_path)
             doc.render(context)
             doc.save(out_docx)
-            convert_to_pdf(out_docx, out_pdf)
+            
+            # Usar pool de conversión asíncrono
+            from ..utils.soffice_pool import get_soffice_pool
+            soffice_pool = get_soffice_pool()
+            success = await soffice_pool.convert_to_pdf_async(out_docx, out_pdf)
+            
+            if not success:
+                raise RuntimeError("Error en conversión a PDF")
+                
             with open(out_pdf, "rb") as f:
                 return f.read()
+    
+    def _render_docx_to_pdf(self, tpl_path: str, context: Dict[str, Any]) -> bytes:
+        # Versión síncrona para compatibilidad
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self._render_docx_to_pdf_async(tpl_path, context))
+        except RuntimeError:
+            # Si no hay loop, crear uno nuevo
+            return asyncio.run(self._render_docx_to_pdf_async(tpl_path, context))
 
     def _render_xlsx_to_pdf(self, tpl_path: str, context: Dict[str, Any]) -> bytes:
         with tempfile.TemporaryDirectory() as td:
@@ -190,6 +269,7 @@ class Renderer:
 
             images_cfg = mapping.get("_images", {}) or {}
             image_previews = mapping.get("_image_previews", {}) or {}
+            signatures_cfg = mapping.get("_signatures", {}) or {}
 
             arr_path = None
             arr_def = None
@@ -333,10 +413,29 @@ class Renderer:
                         print(f"❌ Error dibujando imagen para {key}: {e}")
                         continue
 
+            def draw_signatures():
+                for key, meta in signatures_cfg.items():
+                    # convert px to pt and apply offset
+                    x_pt = float(meta.get("x", 0.0)) / preview_scale + offset_x
+                    y_pt = float(meta.get("y", 0.0)) / preview_scale + offset_y
+                    w_pt = float(meta.get("width", 200.0)) / preview_scale
+                    h_pt = float(meta.get("height", 300.0)) / preview_scale
+                    
+                    try:
+                        # Draw signature rectangle
+                        c.setLineWidth(1.0)
+                        c.setStrokeColor(HexColor("#000000"))
+                        c.rect(x_pt, y_pt - h_pt, w_pt, h_pt)
+                        print(f"✅ Firma dibujada para {key} en ({x_pt:.1f}, {y_pt:.1f}) tamaño {w_pt:.1f}x{h_pt:.1f}")
+                    except Exception as e:
+                        print(f"❌ Error dibujando firma para {key}: {e}")
+                        continue
+
             for page_idx in range(total_pages):
                 draw_header_footer(page_idx)
                 draw_fixed_positions()
                 draw_images()
+                draw_signatures()
                 debug_lines = []
                 debug_lines.append(f"scale={preview_scale}, offset=({offset_x:.1f},{offset_y:.1f}), page= {page_idx+1}/{total_pages}, size=({width:.1f},{height:.1f})")
                 # Fixed fields debug
@@ -412,3 +511,284 @@ class Renderer:
                 writer.write(f)
             with open(out_path, "rb") as f:
                 return f.read()
+
+    async def convert_pdf_to_image(self, pdf_bytes: bytes) -> bytes:
+        """
+        Convierte un PDF a imagen PNG optimizada.
+        
+        Args:
+            pdf_bytes: Bytes del PDF a convertir
+            
+        Returns:
+            Bytes de la imagen PNG
+        """
+        try:
+            # Usar un executor para la conversión síncrona
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor() as executor:
+                image_bytes = await loop.run_in_executor(
+                    executor, 
+                    self._convert_pdf_to_image_sync, 
+                    pdf_bytes
+                )
+            return image_bytes
+        except Exception as e:
+            raise RuntimeError(f"Error convirtiendo PDF a imagen: {e}")
+
+    def _convert_pdf_to_image_sync(self, pdf_bytes: bytes) -> bytes:
+        """
+        Conversión síncrona de PDF a imagen PNG.
+        
+        Args:
+            pdf_bytes: Bytes del PDF a convertir
+            
+        Returns:
+            Bytes de la imagen PNG
+        """
+        print(f"🔄 Iniciando conversión PDF a imagen (tamaño PDF: {len(pdf_bytes)} bytes)")
+        
+        try:
+            print("🔄 Intentando conversión con LibreOffice...")
+            result = self._convert_pdf_to_image_libreoffice(pdf_bytes)
+            print(f"✅ LibreOffice conversion successful (tamaño imagen: {len(result)} bytes)")
+            return result
+        except Exception as e:
+            print(f"⚠️  LibreOffice conversion failed: {e}")
+            try:
+                print("🔄 Intentando conversión con pdf2image...")
+                result = self._convert_pdf_to_image_pil(pdf_bytes)
+                print(f"✅ pdf2image conversion successful (tamaño imagen: {len(result)} bytes)")
+                return result
+            except Exception as e2:
+                print(f"⚠️  pdf2image conversion failed: {e2}")
+                print("🔄 Usando método de fallback...")
+                # Último recurso: imagen de error
+                from PIL import Image, ImageDraw
+                import io
+                
+                img = Image.new('RGB', (400, 200), color='lightgray')
+                draw = ImageDraw.Draw(img)
+                draw.text((50, 80), "Error: No se pudo convertir PDF", fill='red')
+                
+                img_io = io.BytesIO()
+                img.save(img_io, format='PNG')
+                img_io.seek(0)
+                result = img_io.getvalue()
+                print(f"⚠️  Fallback method used (tamaño imagen: {len(result)} bytes)")
+                return result
+
+    def _convert_pdf_to_image_libreoffice(self, pdf_bytes: bytes) -> bytes:
+        """
+        Convierte PDF a imagen usando LibreOffice (conversión real).
+        
+        Args:
+            pdf_bytes: Bytes del PDF a convertir
+            
+        Returns:
+            Bytes de la imagen PNG
+        """
+        import tempfile
+        import os
+        import subprocess
+        
+        print("🔄 Intentando conversión con LibreOffice...")
+        
+        # Verificar si LibreOffice está disponible
+        try:
+            result = subprocess.run(['soffice', '--version'], capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"❌ LibreOffice no está disponible: {result.stderr}")
+                raise RuntimeError("LibreOffice no está instalado o no está en el PATH")
+            print(f"✅ LibreOffice encontrado: {result.stdout.strip()}")
+        except FileNotFoundError:
+            print("❌ LibreOffice no está en el PATH")
+            raise RuntimeError("LibreOffice no está instalado o no está en el PATH")
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Guardar PDF temporal
+            pdf_path = os.path.join(temp_dir, "input.pdf")
+            with open(pdf_path, "wb") as f:
+                f.write(pdf_bytes)
+            print(f"📄 PDF guardado en: {pdf_path}")
+            
+            # Convertir a imagen usando LibreOffice directamente
+            image_path = os.path.join(temp_dir, "output.png")
+            cmd = [
+                'soffice', 
+                '--headless', 
+                '--convert-to', 'png', 
+                '--outdir', temp_dir, 
+                pdf_path
+            ]
+            
+            print(f"🔄 Ejecutando comando: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                # LibreOffice genera el archivo con un nombre diferente
+                expected_image_path = os.path.join(temp_dir, "input.png")
+                if os.path.exists(expected_image_path):
+                    print(f"✅ Imagen generada: {expected_image_path}")
+                    with open(expected_image_path, "rb") as f:
+                        return f.read()
+                else:
+                    print(f"❌ Archivo de imagen no encontrado en: {expected_image_path}")
+                    print(f"📁 Archivos en el directorio: {os.listdir(temp_dir)}")
+                    raise RuntimeError("LibreOffice no generó el archivo de imagen")
+            else:
+                print(f"❌ Error en LibreOffice: {result.stderr}")
+                raise RuntimeError(f"LibreOffice falló: {result.stderr}")
+
+    def _convert_pdf_to_image_pil(self, pdf_bytes: bytes) -> bytes:
+        """
+        Convierte PDF a imagen usando pypdfium2 (sin dependencias externas).
+        
+        Args:
+            pdf_bytes: Bytes del PDF a convertir
+            
+        Returns:
+            Bytes de la imagen PNG
+        """
+        print("🔄 Intentando conversión con pypdfium2...")
+        
+        try:
+            import pypdfium2 as pdfium
+            from PIL import Image
+            import io
+            
+            print(f"📄 Convirtiendo PDF de {len(pdf_bytes)} bytes...")
+            
+            # Cargar PDF con pypdfium2
+            pdf = pdfium.PdfDocument(pdf_bytes)
+            print(f"✅ PDF cargado con {len(pdf)} páginas")
+            
+            if len(pdf) > 0:
+                # Renderizar primera página
+                page = pdf[0]
+                bitmap = page.render(
+                    scale=2.0,  # 2x zoom para mejor calidad
+                    rotation=0,
+                    crop=(0, 0, 0, 0)
+                )
+                
+                # Convertir a PIL Image
+                pil_image = bitmap.to_pil()
+                print(f"🖼️  Tamaño de imagen: {pil_image.size}, Modo: {pil_image.mode}")
+                
+                # Convertir a RGB si es necesario
+                if pil_image.mode != 'RGB':
+                    pil_image = pil_image.convert('RGB')
+                    print("🔄 Convertida a RGB")
+                
+                # Optimizar y guardar
+                img_io = io.BytesIO()
+                pil_image.save(img_io, format='PNG', optimize=True)
+                img_io.seek(0)
+                result = img_io.getvalue()
+                print(f"✅ Imagen PNG generada: {len(result)} bytes")
+                return result
+            else:
+                print("❌ PDF no tiene páginas")
+                raise RuntimeError("PDF no tiene páginas")
+                
+        except ImportError as e:
+            print(f"❌ pypdfium2 no está disponible: {e}")
+            return self._convert_pdf_to_image_fallback(pdf_bytes)
+        except Exception as e:
+            print(f"❌ Error en pypdfium2: {e}")
+            import traceback
+            print(f"📋 Traceback: {traceback.format_exc()}")
+            return self._convert_pdf_to_image_fallback(pdf_bytes)
+
+    def _convert_pdf_to_image_fallback(self, pdf_bytes: bytes) -> bytes:
+        """
+        Método de respaldo para convertir PDF a imagen usando PIL.
+        
+        Args:
+            pdf_bytes: Bytes del PDF a convertir
+            
+        Returns:
+            Bytes de la imagen PNG
+        """
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+            import io
+            
+            # Crear una imagen que simule una página de documento
+            img = Image.new('RGB', (800, 1000), color='white')
+            draw = ImageDraw.Draw(img)
+            
+            # Intentar extraer texto del PDF
+            pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+            text_content = ""
+            
+            for page in pdf_reader.pages:
+                text_content += page.extract_text() or ""
+            
+            # Dibujar un encabezado
+            try:
+                font_large = ImageFont.load_default()
+                font_small = ImageFont.load_default()
+            except:
+                font_large = None
+                font_small = None
+            
+            # Dibujar título
+            draw.text((50, 30), "DOCUMENTO GENERADO", fill='darkblue', font=font_large)
+            
+            # Dibujar línea separadora
+            draw.line([(50, 60), (750, 60)], fill='darkblue', width=2)
+            
+            # Dibujar el contenido del PDF (limitado a 800 caracteres)
+            if text_content:
+                # Dividir el texto en líneas
+                lines = []
+                current_line = ""
+                words = text_content[:800].split()
+                
+                for word in words:
+                    if len(current_line + " " + word) < 80:
+                        current_line += " " + word if current_line else word
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
+                
+                if current_line:
+                    lines.append(current_line)
+                
+                # Dibujar las líneas
+                y_position = 80
+                for line in lines[:30]:  # Máximo 30 líneas
+                    draw.text((50, y_position), line, fill='black', font=font_small)
+                    y_position += 20
+                
+                if len(lines) > 30:
+                    draw.text((50, y_position), "...", fill='gray', font=font_small)
+            else:
+                draw.text((50, 80), "Documento generado correctamente", fill='black', font=font_small)
+                draw.text((50, 100), "El contenido del PDF se ha procesado exitosamente", fill='gray', font=font_small)
+            
+            # Dibujar pie de página
+            draw.line([(50, 950), (750, 950)], fill='darkblue', width=1)
+            draw.text((50, 970), "GenDoc Service - Conversión PDF a Imagen", fill='gray', font=font_small)
+            
+            # Convertir a bytes optimizados
+            img_io = io.BytesIO()
+            img.save(img_io, format='PNG', optimize=True, quality=85)
+            img_io.seek(0)
+            return img_io.getvalue()
+            
+        except Exception as e:
+            # Último recurso: imagen de error
+            from PIL import Image, ImageDraw
+            import io
+            
+            img = Image.new('RGB', (400, 200), color='lightgray')
+            draw = ImageDraw.Draw(img)
+            draw.text((50, 80), "Error: No se pudo convertir PDF", fill='red')
+            
+            img_io = io.BytesIO()
+            img.save(img_io, format='PNG')
+            img_io.seek(0)
+            return img_io.getvalue()

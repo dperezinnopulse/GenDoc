@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from typing import Literal
 from ..services.template_store import TemplateStore
 from ..services.renderer import Renderer
 import io
@@ -10,12 +11,13 @@ from openpyxl import load_workbook
 
 router = APIRouter()
 
-store = TemplateStore(base_path="/workspace/pdfgen/storage/templates")
+store = TemplateStore(base_path="storage/templates")
 renderer = Renderer(store)
 
 class RenderRequest(BaseModel):
     template_id: str
     data: dict
+    output_format: Literal["pdf", "image"] = "pdf"  # Nuevo parámetro con valor por defecto
 
 class MappingRequest(BaseModel):
     mapping: dict | None = None
@@ -166,9 +168,77 @@ async def set_mapping(template_id: str, body: MappingRequest):
 @router.post("/render")
 async def render_document(req: RenderRequest):
     try:
-        pdf_bytes = renderer.render_to_pdf(req.template_id, req.data)
+        # Debug: Log the request parameters
+        print(f"🔍 DEBUG: output_format = {req.output_format}")
+        print(f"🔍 DEBUG: template_id = {req.template_id}")
+        
+        # Get template metadata to check for signatures
+        meta = store.get_template_meta(req.template_id)
+        mapping = meta.get("mapping", {})
+        signatures_cfg = mapping.get("_signatures", {}) or {}
+        
+        # Render PDF asynchronously
+        pdf_bytes = await renderer.render_to_pdf_async(req.template_id, req.data)
+        
+        # Handle different output formats
+        if req.output_format == "image":
+            print("🖼️  DEBUG: Converting PDF to image...")
+            # Convert PDF to image
+            image_bytes = await renderer.convert_pdf_to_image(pdf_bytes)
+            print(f"🖼️  DEBUG: Image conversion complete, size: {len(image_bytes)} bytes")
+            
+            # Prepare response with image and signature coordinates
+            import base64
+            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+            
+            response_data = {
+                "image_base64": image_base64,
+                "signatures": {}
+            }
+            
+            # Add signature coordinates if any exist
+            if signatures_cfg:
+                for key, meta in signatures_cfg.items():
+                    response_data["signatures"][key] = {
+                        "x": meta.get("x", 0),
+                        "y": meta.get("y", 0),
+                        "width": meta.get("width", 200),
+                        "height": meta.get("height", 300)
+                    }
+            
+            return response_data
+        
+        print("📄 DEBUG: Returning PDF format...")
+        # Default: PDF output
+        # Prepare response with signature coordinates if any
+        response_data = {
+            "pdf": pdf_bytes,
+            "signatures": {}
+        }
+        
+        # Add signature coordinates if any exist
+        if signatures_cfg:
+            for key, meta in signatures_cfg.items():
+                response_data["signatures"][key] = {
+                    "x": meta.get("x", 0),
+                    "y": meta.get("y", 0),
+                    "width": meta.get("width", 200),
+                    "height": meta.get("height", 300)
+                }
+        
+        # If no signatures, return just the PDF
+        if not signatures_cfg:
+            return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf")
+        else:
+            # Return JSON with PDF as base64 and signature coordinates
+            import base64
+            pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+            return {
+                "pdf_base64": pdf_base64,
+                "signatures": response_data["signatures"]
+            }
+            
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
     except Exception as ex:
         raise HTTPException(status_code=400, detail=str(ex))
-    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf")

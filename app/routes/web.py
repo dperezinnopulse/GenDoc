@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, Form, UploadFile, File, Query, Request
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, Response
 from starlette import status
 from ..utils.auth import get_session_user, login_user, require_user, set_auth_cookie, clear_auth_cookie
@@ -214,18 +216,41 @@ async def save_mapping(
     return RedirectResponse(f"/admin/templates/{template_id}", status_code=status.HTTP_302_FOUND)
 
 @router.post("/admin/templates/{template_id}/test_render")
-async def test_render(template_id: str, data_json: str = Form("{}"), user: str = Depends(require_user)):
+async def test_render(template_id: str, data_json: str = Form("{}"), format: str = Form("pdf"), user: str = Depends(require_user)):
     try:
         data = json.loads(data_json) if data_json else {}
-        pdf_bytes = renderer.render_to_pdf(template_id, data)
+        
+        if format == "image":
+            # Generar imagen PNG
+            pdf_bytes = renderer.render_to_pdf(template_id, data)
+            # Usar un executor para la conversión síncrona
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor() as executor:
+                image_bytes = await loop.run_in_executor(
+                    executor, 
+                    renderer._convert_pdf_to_image_sync, 
+                    pdf_bytes
+                )
+            return StreamingResponse(
+                io.BytesIO(image_bytes), 
+                media_type="image/png", 
+                headers={"Content-Disposition": f"inline; filename=debug-{template_id}.png"}
+            )
+        else:
+            # Generar PDF (por defecto)
+            pdf_bytes = renderer.render_to_pdf(template_id, data)
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes), 
+                media_type="application/pdf", 
+                headers={"Content-Disposition": f"inline; filename=debug-{template_id}.pdf"}
+            )
     except Exception as ex:
         tmpl = templates_env.get_template("template_detail.html")
         template_meta = store.get_template_meta(template_id)
         return HTMLResponse(tmpl.render(user=user, template=template_meta, error=str(ex)), status_code=400)
-    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": f"inline; filename=debug-{template_id}.pdf"})
 
 @router.get("/admin/templates/{template_id}/test_render")
-async def test_render_get(template_id: str, user: str = Depends(require_user)):
+async def test_render_get(template_id: str, format: str = Query("pdf"), user: str = Depends(require_user)):
     # Compute suggested data and return a debug PDF directly
     template_meta = store.get_template_meta(template_id)
     mapping = _normalize_mapping(template_meta.get("mapping", {}))
@@ -298,8 +323,30 @@ async def test_render_get(template_id: str, user: str = Depends(require_user)):
     if not sample:
         sample = {"nombre": "Ana"}
 
-    pdf_bytes = renderer.render_to_pdf(template_id, sample)
-    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": f"inline; filename=debug-get-{template_id}.pdf"})
+    if format == "image":
+        # Generar imagen PNG
+        pdf_bytes = renderer.render_to_pdf(template_id, sample)
+        # Usar un executor para la conversión síncrona
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            image_bytes = await loop.run_in_executor(
+                executor, 
+                renderer._convert_pdf_to_image_sync, 
+                pdf_bytes
+            )
+        return StreamingResponse(
+            io.BytesIO(image_bytes), 
+            media_type="image/png", 
+            headers={"Content-Disposition": f"inline; filename=debug-get-{template_id}.png"}
+        )
+    else:
+        # Generar PDF (por defecto)
+        pdf_bytes = renderer.render_to_pdf(template_id, sample)
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes), 
+            media_type="application/pdf", 
+            headers={"Content-Disposition": f"inline; filename=debug-get-{template_id}.pdf"}
+        )
 
 # Overlay editor
 @router.get("/admin/templates/{template_id}/overlay", response_class=HTMLResponse)
@@ -425,8 +472,9 @@ async def markers_editor(template_id: str, user: str = Depends(require_user)):
     header_positions = mapping.get("_header_positions", {}) or {}
     footer_positions = mapping.get("_footer_positions", {}) or {}
     images = mapping.get("_images", {}) or {}
+    signatures = mapping.get("_signatures", {}) or {}
     template = templates_env.get_template("markers_editor.html")
-    return template.render(user=user, template=template_meta, positions=positions, header_positions=header_positions, footer_positions=footer_positions, images=images)
+    return template.render(user=user, template=template_meta, positions=positions, header_positions=header_positions, footer_positions=footer_positions, images=images, signatures=signatures)
 
 @router.post("/admin/templates/{template_id}/markers")
 async def save_markers(template_id: str, request: Request, user: str = Depends(require_user)):
@@ -469,6 +517,26 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
         except Exception:
             continue
         new_images[k] = {"x": x, "y": y, "width": width, "height": height}
+
+    # Collect signature markers
+    sig_names = form.getlist("sig_name[]")
+    sig_xs = form.getlist("sig_x[]")
+    sig_ys = form.getlist("sig_y[]")
+    sig_widths = form.getlist("sig_width[]")
+    sig_heights = form.getlist("sig_height[]")
+    new_signatures: dict[str, dict] = {}
+    for i in range(len(sig_names)):
+        k = (sig_names[i] or "").strip()
+        if not k:
+            continue
+        try:
+            x = float(sig_xs[i])
+            y = float(sig_ys[i])
+            width = float(sig_widths[i]) if sig_widths[i] else 200.0
+            height = float(sig_heights[i]) if sig_heights[i] else 300.0
+        except Exception:
+            continue
+        new_signatures[k] = {"x": x, "y": y, "width": width, "height": height}
     
     # Header markers
     h_names = form.getlist("hname[]")
@@ -506,6 +574,7 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
     mapping["_header_positions"] = new_header
     mapping["_footer_positions"] = new_footer
     mapping["_images"] = new_images
+    mapping["_signatures"] = new_signatures
 
     meta = store.get_template_meta(template_id)
     store.save_mapping(template_id, mapping, meta.get("repeat_sections", {}), meta.get("schema", {}))
