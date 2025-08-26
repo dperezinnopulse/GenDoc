@@ -59,6 +59,18 @@ def llamada_api_imagen_con_firmas():
             print(f"      width: {coords['width']}")
             print(f"      height: {coords['height']}")
         
+        # Mostrar información de la imagen si está disponible
+        if "image_info" in result:
+            img_info = result["image_info"]
+            print(f"\n📐 Información de la imagen:")
+            print(f"   - Ancho: {img_info['width']} píxeles")
+            print(f"   - Alto: {img_info['height']} píxeles")
+            print(f"   - PDF original: {img_info['original_pdf_width_points']} x {img_info['original_pdf_height_points']} puntos")
+            print(f"   - Factor de escala X: {img_info['scale_x']:.3f}")
+            print(f"   - Factor de escala Y: {img_info['scale_y']:.3f}")
+            print(f"   - Sistema de coordenadas: {img_info['coordinate_system_origin']}")
+            print(f"   - Coordenadas escaladas para imagen de {img_info['width']}x{img_info['height']}")
+        
         # Decodificar y guardar la imagen
         if image_base64:
             image_data = base64.b64decode(image_base64)

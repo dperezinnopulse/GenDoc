@@ -555,7 +555,7 @@ class Renderer:
             pil_image.save(img_io, format='PNG')
             return img_io.getvalue()
 
-    def _convert_pdf_to_image_pil(self, pdf_bytes: bytes) -> bytes:
+    def _convert_pdf_to_image_pil(self, pdf_bytes: bytes) -> tuple[bytes, float, float]:
         """
         Convierte PDF a imagen usando pypdfium2 (sin dependencias externas).
         
@@ -563,7 +563,7 @@ class Renderer:
             pdf_bytes: Bytes del PDF a convertir
             
         Returns:
-            Bytes de la imagen optimizada
+            Tuple con (bytes de imagen optimizada, ancho_pdf_puntos, alto_pdf_puntos)
         """
         print("🔄 Intentando conversión con pypdfium2...")
         
@@ -581,6 +581,11 @@ class Renderer:
             if len(pdf) > 0:
                 # Renderizar primera página con mejor calidad
                 page = pdf[0]
+                
+                # Obtener dimensiones originales del PDF en puntos
+                original_pdf_width_points = page.get_width()
+                original_pdf_height_points = page.get_height()
+                
                 bitmap = page.render(
                     scale=2.0,  # Mejor calidad inicial
                     rotation=0,
@@ -594,7 +599,7 @@ class Renderer:
                 # Optimizar la imagen para reducir tamaño (aumentar 20% calidad)
                 optimized_image_bytes = self._optimize_image(pil_image, target_size_kb=216)
                 print(f"✅ Imagen optimizada: {len(optimized_image_bytes)} bytes")
-                return optimized_image_bytes
+                return optimized_image_bytes, original_pdf_width_points, original_pdf_height_points
             else:
                 print("❌ PDF no tiene páginas")
                 raise RuntimeError("PDF no tiene páginas")
@@ -608,7 +613,7 @@ class Renderer:
             print(f"📋 Traceback: {traceback.format_exc()}")
             return self._convert_pdf_to_image_fallback(pdf_bytes)
 
-    def _convert_pdf_to_image_fallback(self, pdf_bytes: bytes) -> bytes:
+    def _convert_pdf_to_image_fallback(self, pdf_bytes: bytes) -> tuple[bytes, float, float]:
         """
         Método de respaldo para convertir PDF a imagen usando PIL.
         
@@ -683,7 +688,7 @@ class Renderer:
             
             # Optimizar la imagen
             optimized_image_bytes = self._optimize_image(img, target_size_kb=50)
-            return optimized_image_bytes
+            return optimized_image_bytes, 595.0, 842.0  # A4 en puntos
             
         except Exception as e:
             # Último recurso: imagen de error optimizada
@@ -695,9 +700,9 @@ class Renderer:
             draw.text((50, 80), "Error: No se pudo convertir PDF", fill='red')
             
             optimized_image_bytes = self._optimize_image(img, target_size_kb=20)
-            return optimized_image_bytes
+            return optimized_image_bytes, 595.0, 842.0  # A4 en puntos
 
-    def convert_pdf_to_image(self, pdf_bytes: bytes) -> bytes:
+    def convert_pdf_to_image(self, pdf_bytes: bytes) -> tuple[bytes, float, float]:
         """
         Convierte un PDF a imagen optimizada.
         
@@ -705,18 +710,18 @@ class Renderer:
             pdf_bytes: Bytes del PDF a convertir
             
         Returns:
-            Bytes de la imagen optimizada
+            Tuple con (bytes de imagen optimizada, ancho_pdf_puntos, alto_pdf_puntos)
         """
         print(f"🔄 Iniciando conversión PDF a imagen (tamaño PDF: {len(pdf_bytes)} bytes)")
         
         try:
             print("🔄 Intentando conversión con pypdfium2...")
             result = self._convert_pdf_to_image_pil(pdf_bytes)
-            print(f"✅ Conversión exitosa (tamaño imagen: {len(result)} bytes)")
+            print(f"✅ Conversión exitosa (tamaño imagen: {len(result[0])} bytes)")
             return result
         except Exception as e:
             print(f"⚠️  Conversión falló: {e}")
             print("🔄 Usando método de fallback...")
             result = self._convert_pdf_to_image_fallback(pdf_bytes)
-            print(f"✅ Fallback exitoso (tamaño imagen: {len(result)} bytes)")
+            print(f"✅ Fallback exitoso (tamaño imagen: {len(result[0])} bytes)")
             return result

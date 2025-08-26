@@ -29,6 +29,7 @@
             <td><select name="type[]">
               <option value="text" selected>Texto</option>
               <option value="image">Imagen</option>
+              <option value="signature">Firma</option>
             </select></td>
           </tr>
           {% endif %}
@@ -40,6 +41,7 @@
             <td><select name="type[]">
               <option value="text" selected>Texto</option>
               <option value="image">Imagen</option>
+              <option value="signature">Firma</option>
             </select></td>
           </tr>
         </tbody>
@@ -64,6 +66,29 @@
             <td><input type="number" name="img_y[]" step="0.1" /></td>
             <td><input type="number" name="img_width[]" step="1" value="100" /></td>
             <td><input type="number" name="img_height[]" step="1" value="100" /></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Campos de firma</h2>
+      <table>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Ancho</th><th>Alto</th></tr></thead>
+        <tbody>
+          {% for k, v in signatures.items() %}
+          <tr>
+            <td><input type="text" name="sig_name[]" value="{{ k }}" /></td>
+            <td><input type="number" name="sig_x[]" step="0.1" value="{{ v.x }}" /></td>
+            <td><input type="number" name="sig_y[]" step="0.1" value="{{ v.y }}" /></td>
+            <td><input type="number" name="sig_width[]" step="1" value="{{ v.width }}" /></td>
+            <td><input type="number" name="sig_height[]" step="1" value="{{ v.height }}" /></td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td><input type="text" name="sig_name[]" placeholder="Nuevo" /></td>
+            <td><input type="number" name="sig_x[]" step="0.1" /></td>
+            <td><input type="number" name="sig_y[]" step="0.1" /></td>
+            <td><input type="number" name="sig_width[]" step="1" value="200" /></td>
+            <td><input type="number" name="sig_height[]" step="1" value="300" /></td>
           </tr>
         </tbody>
       </table>

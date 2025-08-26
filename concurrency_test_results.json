@@ -1,0 +1,818 @@
+{
+  "test_config": {
+    "total_requests": 100,
+    "concurrent_requests": 10,
+    "template_id": "4beba2ce11614d36bd066809e2f52115",
+    "base_url": "http://localhost:8080"
+  },
+  "results": [
+    {
+      "request_id": 7,
+      "status_code": 200,
+      "response_time": 1.153651475906372,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:23.933937"
+    },
+    {
+      "request_id": 6,
+      "status_code": 200,
+      "response_time": 1.278872013092041,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:23.937354"
+    },
+    {
+      "request_id": 9,
+      "status_code": 200,
+      "response_time": 1.2802538871765137,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:24.542147"
+    },
+    {
+      "request_id": 4,
+      "status_code": 200,
+      "response_time": 0.6610901355743408,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:24.549066"
+    },
+    {
+      "request_id": 0,
+      "status_code": 200,
+      "response_time": 1.283846139907837,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:24.896974"
+    },
+    {
+      "request_id": 1,
+      "status_code": 200,
+      "response_time": 0.655430793762207,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:25.106264"
+    },
+    {
+      "request_id": 3,
+      "status_code": 200,
+      "response_time": 0.6615898609161377,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:25.264760"
+    },
+    {
+      "request_id": 8,
+      "status_code": 200,
+      "response_time": 0.6638391017913818,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:25.400564"
+    },
+    {
+      "request_id": 5,
+      "status_code": 200,
+      "response_time": 0.663283109664917,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:25.411028"
+    },
+    {
+      "request_id": 2,
+      "status_code": 200,
+      "response_time": 1.2818543910980225,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:25.747441"
+    },
+    {
+      "request_id": 13,
+      "status_code": 200,
+      "response_time": 0.3157777786254883,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:35.452161"
+    },
+    {
+      "request_id": 10,
+      "status_code": 200,
+      "response_time": 0.25847864151000977,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:35.637736"
+    },
+    {
+      "request_id": 11,
+      "status_code": 200,
+      "response_time": 0.5656015872955322,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:35.786836"
+    },
+    {
+      "request_id": 16,
+      "status_code": 200,
+      "response_time": 0.12748336791992188,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:35.914350"
+    },
+    {
+      "request_id": 15,
+      "status_code": 200,
+      "response_time": 0.13871264457702637,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:36.082473"
+    },
+    {
+      "request_id": 17,
+      "status_code": 200,
+      "response_time": 0.15146660804748535,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:36.225438"
+    },
+    {
+      "request_id": 12,
+      "status_code": 200,
+      "response_time": 0.14345860481262207,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:36.227380"
+    },
+    {
+      "request_id": 14,
+      "status_code": 200,
+      "response_time": 0.19309306144714355,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:36.523778"
+    },
+    {
+      "request_id": 18,
+      "status_code": 200,
+      "response_time": 0.2839701175689697,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:37.160181"
+    },
+    {
+      "request_id": 19,
+      "status_code": 200,
+      "response_time": 0.12272763252258301,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:37.352843"
+    },
+    {
+      "request_id": 20,
+      "status_code": 200,
+      "response_time": 0.12215375900268555,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:46.963099"
+    },
+    {
+      "request_id": 21,
+      "status_code": 200,
+      "response_time": 0.11919045448303223,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:47.178219"
+    },
+    {
+      "request_id": 24,
+      "status_code": 200,
+      "response_time": 0.13586735725402832,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:47.559021"
+    },
+    {
+      "request_id": 26,
+      "status_code": 200,
+      "response_time": 0.2562856674194336,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:47.565294"
+    },
+    {
+      "request_id": 23,
+      "status_code": 200,
+      "response_time": 0.1357707977294922,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:47.931217"
+    },
+    {
+      "request_id": 27,
+      "status_code": 200,
+      "response_time": 0.6257286071777344,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:48.077373"
+    },
+    {
+      "request_id": 22,
+      "status_code": 200,
+      "response_time": 0.12813162803649902,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:48.079031"
+    },
+    {
+      "request_id": 29,
+      "status_code": 200,
+      "response_time": 0.19448304176330566,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:48.413122"
+    },
+    {
+      "request_id": 28,
+      "status_code": 200,
+      "response_time": 0.15459370613098145,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:48.652383"
+    },
+    {
+      "request_id": 25,
+      "status_code": 200,
+      "response_time": 0.2547335624694824,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:48.654131"
+    },
+    {
+      "request_id": 30,
+      "status_code": 200,
+      "response_time": 0.1443324089050293,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:58.377107"
+    },
+    {
+      "request_id": 31,
+      "status_code": 200,
+      "response_time": 0.34185314178466797,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:58.717148"
+    },
+    {
+      "request_id": 32,
+      "status_code": 200,
+      "response_time": 0.16455841064453125,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:58.899624"
+    },
+    {
+      "request_id": 33,
+      "status_code": 200,
+      "response_time": 0.2947070598602295,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:59.025251"
+    },
+    {
+      "request_id": 36,
+      "status_code": 200,
+      "response_time": 0.27285242080688477,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:59.186600"
+    },
+    {
+      "request_id": 37,
+      "status_code": 200,
+      "response_time": 0.23173761367797852,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:59.341482"
+    },
+    {
+      "request_id": 34,
+      "status_code": 200,
+      "response_time": 0.1317582130432129,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:59.544985"
+    },
+    {
+      "request_id": 35,
+      "status_code": 200,
+      "response_time": 0.2735295295715332,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:59.546685"
+    },
+    {
+      "request_id": 39,
+      "status_code": 200,
+      "response_time": 0.2590608596801758,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:35:59.825318"
+    },
+    {
+      "request_id": 38,
+      "status_code": 200,
+      "response_time": 0.2591111660003662,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:00.066177"
+    },
+    {
+      "request_id": 40,
+      "status_code": 200,
+      "response_time": 0.1450352668762207,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:09.858119"
+    },
+    {
+      "request_id": 41,
+      "status_code": 200,
+      "response_time": 0.13078784942626953,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:10.169147"
+    },
+    {
+      "request_id": 45,
+      "status_code": 200,
+      "response_time": 0.13524127006530762,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:10.368502"
+    },
+    {
+      "request_id": 42,
+      "status_code": 200,
+      "response_time": 0.12135148048400879,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:10.522469"
+    },
+    {
+      "request_id": 43,
+      "status_code": 200,
+      "response_time": 0.12890386581420898,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:10.688379"
+    },
+    {
+      "request_id": 46,
+      "status_code": 200,
+      "response_time": 0.1382429599761963,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:10.816763"
+    },
+    {
+      "request_id": 44,
+      "status_code": 200,
+      "response_time": 0.136307954788208,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:10.971223"
+    },
+    {
+      "request_id": 49,
+      "status_code": 200,
+      "response_time": 0.13111376762390137,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:11.098187"
+    },
+    {
+      "request_id": 47,
+      "status_code": 200,
+      "response_time": 0.26281166076660156,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:11.324270"
+    },
+    {
+      "request_id": 48,
+      "status_code": 200,
+      "response_time": 0.21015191078186035,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:11.467557"
+    },
+    {
+      "request_id": 50,
+      "status_code": 200,
+      "response_time": 0.12765812873840332,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:20.319606"
+    },
+    {
+      "request_id": 51,
+      "status_code": 200,
+      "response_time": 0.1262974739074707,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:20.695058"
+    },
+    {
+      "request_id": 52,
+      "status_code": 200,
+      "response_time": 0.13035941123962402,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:20.994457"
+    },
+    {
+      "request_id": 56,
+      "status_code": 200,
+      "response_time": 0.12452435493469238,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:21.159903"
+    },
+    {
+      "request_id": 53,
+      "status_code": 200,
+      "response_time": 0.12647128105163574,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:21.398698"
+    },
+    {
+      "request_id": 55,
+      "status_code": 200,
+      "response_time": 0.1372389793395996,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:21.547535"
+    },
+    {
+      "request_id": 57,
+      "status_code": 200,
+      "response_time": 0.1236581802368164,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:21.749653"
+    },
+    {
+      "request_id": 54,
+      "status_code": 200,
+      "response_time": 0.12218189239501953,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:21.888730"
+    },
+    {
+      "request_id": 58,
+      "status_code": 200,
+      "response_time": 0.12252926826477051,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:22.098671"
+    },
+    {
+      "request_id": 59,
+      "status_code": 200,
+      "response_time": 0.1237027645111084,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:22.272260"
+    },
+    {
+      "request_id": 60,
+      "status_code": 200,
+      "response_time": 0.1645493507385254,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:30.915853"
+    },
+    {
+      "request_id": 61,
+      "status_code": 200,
+      "response_time": 0.16098380088806152,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:31.196384"
+    },
+    {
+      "request_id": 64,
+      "status_code": 200,
+      "response_time": 0.13776922225952148,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:31.493500"
+    },
+    {
+      "request_id": 62,
+      "status_code": 200,
+      "response_time": 0.1418135166168213,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:31.496200"
+    },
+    {
+      "request_id": 63,
+      "status_code": 200,
+      "response_time": 0.23638057708740234,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:31.748793"
+    },
+    {
+      "request_id": 65,
+      "status_code": 200,
+      "response_time": 0.1358962059020996,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:31.891700"
+    },
+    {
+      "request_id": 67,
+      "status_code": 200,
+      "response_time": 0.15722918510437012,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:32.126461"
+    },
+    {
+      "request_id": 66,
+      "status_code": 200,
+      "response_time": 0.13480734825134277,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:32.157573"
+    },
+    {
+      "request_id": 68,
+      "status_code": 200,
+      "response_time": 0.14484834671020508,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:32.507071"
+    },
+    {
+      "request_id": 69,
+      "status_code": 200,
+      "response_time": 0.13704466819763184,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:32.636490"
+    },
+    {
+      "request_id": 70,
+      "status_code": 200,
+      "response_time": 0.12079787254333496,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:41.424806"
+    },
+    {
+      "request_id": 71,
+      "status_code": 200,
+      "response_time": 0.123077392578125,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:41.763998"
+    },
+    {
+      "request_id": 72,
+      "status_code": 200,
+      "response_time": 0.12117576599121094,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:41.948399"
+    },
+    {
+      "request_id": 74,
+      "status_code": 200,
+      "response_time": 0.11801815032958984,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:42.152176"
+    },
+    {
+      "request_id": 73,
+      "status_code": 200,
+      "response_time": 0.2334880828857422,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:42.153627"
+    },
+    {
+      "request_id": 75,
+      "status_code": 200,
+      "response_time": 0.1313159465789795,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:42.504482"
+    },
+    {
+      "request_id": 76,
+      "status_code": 200,
+      "response_time": 0.20428085327148438,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:42.720777"
+    },
+    {
+      "request_id": 77,
+      "status_code": 200,
+      "response_time": 0.3209505081176758,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:42.880905"
+    },
+    {
+      "request_id": 78,
+      "status_code": 200,
+      "response_time": 0.1216280460357666,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:43.035998"
+    },
+    {
+      "request_id": 79,
+      "status_code": 200,
+      "response_time": 0.13283634185791016,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:43.172600"
+    },
+    {
+      "request_id": 80,
+      "status_code": 200,
+      "response_time": 0.12274861335754395,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:52.316665"
+    },
+    {
+      "request_id": 81,
+      "status_code": 200,
+      "response_time": 0.12258148193359375,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:52.595695"
+    },
+    {
+      "request_id": 82,
+      "status_code": 200,
+      "response_time": 0.12964773178100586,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:52.916112"
+    },
+    {
+      "request_id": 83,
+      "status_code": 200,
+      "response_time": 0.2563154697418213,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:53.093908"
+    },
+    {
+      "request_id": 84,
+      "status_code": 200,
+      "response_time": 0.256833553314209,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:53.260028"
+    },
+    {
+      "request_id": 87,
+      "status_code": 200,
+      "response_time": 0.13753008842468262,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:53.464756"
+    },
+    {
+      "request_id": 85,
+      "status_code": 200,
+      "response_time": 0.14360713958740234,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:53.652613"
+    },
+    {
+      "request_id": 89,
+      "status_code": 200,
+      "response_time": 0.17603230476379395,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:53.806422"
+    },
+    {
+      "request_id": 86,
+      "status_code": 200,
+      "response_time": 0.13074445724487305,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:53.960507"
+    },
+    {
+      "request_id": 88,
+      "status_code": 200,
+      "response_time": 0.1340179443359375,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:36:54.165286"
+    },
+    {
+      "request_id": 90,
+      "status_code": 200,
+      "response_time": 0.13843584060668945,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.263285"
+    },
+    {
+      "request_id": 91,
+      "status_code": 200,
+      "response_time": 0.18471813201904297,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.428255"
+    },
+    {
+      "request_id": 93,
+      "status_code": 200,
+      "response_time": 0.12998032569885254,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.522735"
+    },
+    {
+      "request_id": 92,
+      "status_code": 200,
+      "response_time": 0.13559865951538086,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.527899"
+    },
+    {
+      "request_id": 94,
+      "status_code": 200,
+      "response_time": 0.13481354713439941,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.541720"
+    },
+    {
+      "request_id": 95,
+      "status_code": 200,
+      "response_time": 0.1286783218383789,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.569992"
+    },
+    {
+      "request_id": 97,
+      "status_code": 200,
+      "response_time": 0.1303880214691162,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.579601"
+    },
+    {
+      "request_id": 96,
+      "status_code": 200,
+      "response_time": 0.13768267631530762,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.613524"
+    },
+    {
+      "request_id": 98,
+      "status_code": 200,
+      "response_time": 0.19814109802246094,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.622376"
+    },
+    {
+      "request_id": 99,
+      "status_code": 200,
+      "response_time": 0.1333160400390625,
+      "success": true,
+      "error": null,
+      "timestamp": "2025-08-26T09:37:03.623917"
+    }
+  ],
+  "summary": {
+    "total_time": 112.04620456695557,
+    "completed_requests": 100,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "avg_response_time": 0.2543019270896912,
+    "requests_per_second": 0.8924889547708231
+  }
+}

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Optional
 from ..services.template_store import TemplateStore
 from ..services.renderer import Renderer
 import io
@@ -17,7 +17,8 @@ renderer = Renderer(store)
 class RenderRequest(BaseModel):
     template_id: str
     data: dict
-    output_format: Literal["pdf", "image"] = "pdf"  # Nuevo parámetro con valor por defecto
+    output_format: Literal["pdf", "image"] = "pdf"
+    image_format: Optional[Literal["webp", "png", "jpeg"]] = "webp"  # Nuevo parámetro con valor por defecto
 
 class MappingRequest(BaseModel):
     mapping: dict | None = None
@@ -175,7 +176,20 @@ async def render_document(req: RenderRequest):
         # Get template metadata to check for signatures
         meta = store.get_template_meta(req.template_id)
         mapping = meta.get("mapping", {})
-        signatures_cfg = mapping.get("_signatures", {}) or {}
+        
+        # Extract signature coordinates from _positions
+        positions = mapping.get("_positions", {})
+        signatures_cfg = {}
+        
+        # Look for signature fields in positions
+        for field_name, coords in positions.items():
+            if "firma" in field_name.lower() or "signature" in field_name.lower():
+                signatures_cfg[field_name] = {
+                    "x": coords[0] if isinstance(coords, list) and len(coords) >= 2 else 0,
+                    "y": coords[1] if isinstance(coords, list) and len(coords) >= 2 else 0,
+                    "width": 200,  # Default width
+                    "height": 100   # Default height
+                }
         
         # Render PDF synchronously
         pdf_bytes = renderer.render_to_pdf(req.template_id, req.data)
@@ -184,26 +198,52 @@ async def render_document(req: RenderRequest):
         if req.output_format == "image":
             print("🖼️  DEBUG: Converting PDF to image...")
             # Convert PDF to image
-            image_bytes = renderer.convert_pdf_to_image(pdf_bytes)
+            image_bytes, original_pdf_width_points, original_pdf_height_points = renderer.convert_pdf_to_image(pdf_bytes)
             print(f"🖼️  DEBUG: Image conversion complete, size: {len(image_bytes)} bytes")
             
             # Prepare response with image and signature coordinates
             import base64
             image_base64 = base64.b64encode(image_bytes).decode('utf-8')
             
+            # Get image dimensions for coordinate scaling
+            from PIL import Image
+            import io
+            pil_image = Image.open(io.BytesIO(image_bytes))
+            image_width, image_height = pil_image.size
+            
             response_data = {
                 "image_base64": image_base64,
+                "image_info": {
+                    "width": image_width,
+                    "height": image_height,
+                    "original_pdf_width_points": original_pdf_width_points,
+                    "original_pdf_height_points": original_pdf_height_points,
+                    "scale_x": image_width / original_pdf_width_points,
+                    "scale_y": image_height / original_pdf_height_points,
+                    "coordinate_system_origin": "top-left"
+                },
                 "signatures": {}
             }
             
-            # Add signature coordinates if any exist
+            # Add signature coordinates if any exist (scaled to image dimensions)
             if signatures_cfg:
                 for key, meta in signatures_cfg.items():
+                    # Obtener coordenadas originales del PDF
+                    x_pdf = meta.get("x", 0)
+                    y_pdf_bottom_left = meta.get("y", 0)  # PDF usa coordenadas bottom-left
+                    
+                    # Convertir coordenada Y de PDF (bottom-left) a imagen (top-left)
+                    y_image_top_left = original_pdf_height_points - y_pdf_bottom_left
+                    
+                    # Escalar coordenadas usando los factores reales
+                    scale_x = image_width / original_pdf_width_points
+                    scale_y = image_height / original_pdf_height_points
+                    
                     response_data["signatures"][key] = {
-                        "x": meta.get("x", 0),
-                        "y": meta.get("y", 0),
-                        "width": meta.get("width", 200),
-                        "height": meta.get("height", 300)
+                        "x": int(x_pdf * scale_x),
+                        "y": int(y_image_top_left * scale_y),
+                        "width": int(meta.get("width", 200) * scale_x),
+                        "height": int(meta.get("height", 100) * scale_y)
                     }
             
             return response_data
@@ -216,14 +256,14 @@ async def render_document(req: RenderRequest):
             "signatures": {}
         }
         
-        # Add signature coordinates if any exist
+        # Add signature coordinates if any exist (PDF coordinates, no scaling needed)
         if signatures_cfg:
             for key, meta in signatures_cfg.items():
                 response_data["signatures"][key] = {
                     "x": meta.get("x", 0),
                     "y": meta.get("y", 0),
                     "width": meta.get("width", 200),
-                    "height": meta.get("height", 300)
+                    "height": meta.get("height", 100)
                 }
         
         # If no signatures, return just the PDF
