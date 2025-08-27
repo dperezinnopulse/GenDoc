@@ -241,15 +241,19 @@ async def render_document(req: RenderRequest):
                     print(f"🔍 DEBUG: Template coordinates for '{key}': x={x_template}, y={y_template}")
                     print(f"🔍 DEBUG: Image dimensions: {image_width} x {image_height}")
                     
-                    # Usar factores de escalado específicos para este template
-                    # Basándome en el análisis, las coordenadas del template necesitan escalado directo
-                    scale_factor_x = 1.27
-                    scale_factor_y = 13.68
+                    # Las coordenadas del template están en un sistema personalizado
+                    # Usar ratios directos calculados para este template específico
+                    # Basándome en las coordenadas reales: ratio_x = 1.2601, ratio_y = 7.4728
+                    ratio_x = 1.2601
+                    ratio_y = 7.4728
                     
-                    final_x = int(x_template * scale_factor_x)
-                    final_y = int(y_template * scale_factor_y)
-                    final_width = int(meta.get("width", 200) * scale_factor_x)
-                    final_height = int(meta.get("height", 100) * scale_factor_y)
+                    # Aplicar ratios directos
+                    final_x = int(x_template * ratio_x)
+                    final_y = int(y_template * ratio_y)
+                    
+                    # Escalar dimensiones usando el mismo ratio X
+                    final_width = int(meta.get("width", 200) * ratio_x)
+                    final_height = int(meta.get("height", 100) * ratio_y)
                     
                     print(f"🔍 DEBUG: Converted coordinates for '{key}': x={final_x}, y={final_y}, w={final_width}, h={final_height}")
                     
