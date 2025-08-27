@@ -38,8 +38,18 @@ def _ensure_path(d: dict, path: str):
     return cur, parts[-1] if parts else None
 
 
-def _sample_value_for(field_name: str) -> str:
+def _sample_value_for(field_name: str, signatures_cfg: dict = None) -> str:
     low = field_name.lower()
+    
+    # Si es un campo de firma, mostrar coordenadas
+    if signatures_cfg and field_name in signatures_cfg:
+        sig_meta = signatures_cfg[field_name]
+        x = sig_meta.get("x", 0)
+        y = sig_meta.get("y", 0)
+        width = sig_meta.get("width", 200)
+        height = sig_meta.get("height", 300)
+        return f"[FIRMA: x={x}, y={y}, w={width}, h={height}]"
+    
     if "nombre" in low:
         return "Ana"
     if "apellido" in low:
@@ -250,6 +260,18 @@ async def test_render_get(template_id: str, format: str = Query("pdf"), user: st
     mapping = _normalize_mapping(template_meta.get("mapping", {}))
     positions: dict = mapping.get("_positions", {}) or {}
     repeat_rows: dict = mapping.get("_repeat_rows", {}) or {}
+    
+    # Crear configuración de firmas basada en las posiciones
+    signatures_cfg = {}
+    for field_name, pos in positions.items():
+        if isinstance(pos, list) and len(pos) >= 2:
+            # Si tiene coordenadas x,y, considerarlo como firma
+            signatures_cfg[field_name] = {
+                "x": pos[0] if len(pos) > 0 else 0,
+                "y": pos[1] if len(pos) > 1 else 0,
+                "width": 200,  # Ancho por defecto
+                "height": 300  # Alto por defecto
+            }
 
     # Build suggested data (same as detail view)
     sample: dict = {}
@@ -260,7 +282,7 @@ async def test_render_get(template_id: str, format: str = Query("pdf"), user: st
             for subkey in items_fields:
                 parent, leaf = _ensure_path(item, subkey)
                 if leaf:
-                    parent[leaf] = _sample_value_for(leaf)
+                    parent[leaf] = _sample_value_for(leaf, signatures_cfg)
             if not item:
                 item["valor"] = "Texto"
             return item
@@ -270,16 +292,16 @@ async def test_render_get(template_id: str, format: str = Query("pdf"), user: st
             continue
         parent, leaf = _ensure_path(sample, key)
         if leaf:
-            parent[leaf] = _sample_value_for(leaf)
+            parent[leaf] = _sample_value_for(leaf, signatures_cfg)
     for k, v in mapping.items():
         if k.startswith("_"):
             continue
         if k not in sample:
             parent, leaf = _ensure_path(sample, k)
             if leaf:
-                parent[leaf] = _sample_value_for(leaf)
+                parent[leaf] = _sample_value_for(leaf, signatures_cfg)
             else:
-                sample[k] = _sample_value_for(k)
+                sample[k] = _sample_value_for(k, signatures_cfg)
 
     if not sample:
         kind = template_meta.get("kind")
@@ -311,7 +333,7 @@ async def test_render_get(template_id: str, format: str = Query("pdf"), user: st
                 for key in sorted(found):
                     parent, leaf = _ensure_path(sample, key)
                     if leaf:
-                        parent[leaf] = _sample_value_for(leaf)
+                        parent[leaf] = _sample_value_for(leaf, signatures_cfg)
             except Exception:
                 pass
     if not sample:
@@ -321,7 +343,7 @@ async def test_render_get(template_id: str, format: str = Query("pdf"), user: st
         # Generar imagen PNG
         pdf_bytes = renderer.render_to_pdf(template_id, sample)
         # Convertir PDF a imagen optimizada
-        image_bytes = renderer.convert_pdf_to_image(pdf_bytes)
+        image_bytes, _, _ = renderer.convert_pdf_to_image(pdf_bytes)
         return StreamingResponse(
             io.BytesIO(image_bytes), 
             media_type="image/png", 

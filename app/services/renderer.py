@@ -599,7 +599,17 @@ class Renderer:
                 # Optimizar la imagen para reducir tamaño (aumentar 20% calidad)
                 optimized_image_bytes = self._optimize_image(pil_image, target_size_kb=216)
                 print(f"✅ Imagen optimizada: {len(optimized_image_bytes)} bytes")
-                return optimized_image_bytes, original_pdf_width_points, original_pdf_height_points
+                
+                # Obtener las dimensiones reales de la imagen optimizada
+                from PIL import Image
+                import io
+                optimized_pil_image = Image.open(io.BytesIO(optimized_image_bytes))
+                final_image_width, final_image_height = optimized_pil_image.size
+                
+                print(f"📏 Dimensiones imagen final: {final_image_width}x{final_image_height}")
+                print(f"📏 Dimensiones PDF original: {original_pdf_width_points}x{original_pdf_height_points}")
+                
+                return optimized_image_bytes, final_image_width, final_image_height
             else:
                 print("❌ PDF no tiene páginas")
                 raise RuntimeError("PDF no tiene páginas")
