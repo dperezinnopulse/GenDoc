@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block subnav %}
+<a href="/admin" class="active">Plantillas</a>
+<a href="#">Subir</a>
+{% endblock %}
+{% block content %}
+<div>
+  <h2>Subir plantilla</h2>
+  <form method="post" action="/admin/templates/upload" enctype="multipart/form-data">
+    <input type="text" name="name" placeholder="Nombre" />
+    <input type="file" name="file" accept=".docx,.xlsx,.pdf" required />
+    <button type="submit">Subir</button>
+  </form>
+
+  <h2>Listado</h2>
+  <table>
+    <thead>
+      <tr><th>Nombre</th><th>Tipo</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      {% for t in templates %}
+      <tr>
+        <td>{{ t.name }}</td>
+        <td>{{ t.kind }}</td>
+        <td style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <a href="/admin/templates/{{ t.id }}">Ver</a>
+          {% if t.kind == 'pdf' %}
+          <a href="/admin/templates/{{ t.id }}/overlay">Editor visual</a>
+          <a href="/admin/templates/{{ t.id }}/markers">Editar marcadores</a>
+          {% endif %}
+          <form method="post" action="/admin/templates/{{ t.id }}/delete" onsubmit="return confirm('¿Eliminar plantilla?');">
+            <button type="submit" style="background:#ef4444">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

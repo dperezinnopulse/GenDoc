@@ -3,13 +3,18 @@ version: '3.8'
 services:
   gendoc:
     build: .
+    container_name: gendoc-preprod
     ports:
       - "8080:8080"
     volumes:
       - ./storage:/app/storage
+      - ./logs:/app/logs
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=preprod
+      - DEBUG=false
+      - LOG_LEVEL=INFO
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -17,3 +22,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - gendoc-network
+
+networks:
+  gendoc-network:
+    driver: bridge

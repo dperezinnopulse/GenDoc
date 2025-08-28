@@ -1,48 +1,76 @@
-# 📦 Archivos de Despliegue - GenDoc
+# 📦 Archivos de Despliegue - GenDoc Ubuntu
 
-Esta carpeta contiene todos los archivos necesarios para desplegar la aplicación GenDoc en un servidor de preproducción.
+Esta carpeta contiene todos los archivos necesarios para desplegar la aplicación GenDoc en un servidor Ubuntu.
 
 ## 📁 Archivos Incluidos
 
 ### 🐳 **Docker**
 - **`Dockerfile`** - Configuración del contenedor Docker
 - **`docker-compose.yml`** - Orquestación de servicios
-- **`.dockerignore`** - Archivos a ignorar en el build
 
-### ⚙️ **Configuración**
-- **`config.preprod.env`** - Variables de entorno para preproducción
+### ⚙️ **Aplicación**
+- **`app/`** - Código fuente de la aplicación
+- **`requirements.txt`** - Dependencias de Python
+
+### 🚀 **Despliegue**
 - **`deploy.sh`** - Script automático de despliegue
 
-### 📚 **Documentación**
-- **`DEPLOYMENT.md`** - Guía completa de despliegue
+## 🛠️ Instrucciones de Despliegue
 
-## 🚀 Instrucciones de Uso
+### 1. Instalar Docker (si no está instalado)
+```bash
+sudo apt update
+sudo apt install docker.io docker-compose
+sudo usermod -aG docker $USER
+# Cerrar sesión y volver a iniciar, o ejecutar: newgrp docker
+```
 
-### Para Windows:
-1. **Copiar estos archivos** al servidor de preproducción
-2. **Instalar Docker Desktop** para Windows
-3. **Ejecutar** `deploy.bat` (doble clic o desde cmd)
+### 2. Copiar archivos al servidor
+```bash
+# Copiar esta carpeta al servidor Ubuntu
+scp -r publish/ usuario@servidor:/ruta/destino/
+```
 
-### Para Linux/Mac:
-1. **Copiar estos archivos** al servidor de preproducción
-2. **Seguir la guía** en `DEPLOYMENT.md`
-3. **Ejecutar** `./deploy.sh` para desplegar automáticamente
+### 3. Desplegar automáticamente
+```bash
+cd /ruta/destino/publish
+chmod +x deploy.sh
+./deploy.sh
+```
+
+## 🌐 URLs de Acceso
+
+Una vez desplegado:
+- **Aplicación principal**: http://localhost:8080
+- **Documentación API**: http://localhost:8080/docs
+- **Interfaz de administración**: http://localhost:8080/admin
+- **Health check**: http://localhost:8080/health
+
+## 📊 Comandos de Gestión
+
+```bash
+# Ver logs
+docker-compose logs -f
+
+# Reiniciar
+docker-compose restart
+
+# Parar
+docker-compose down
+
+# Ver estado
+docker-compose ps
+```
 
 ## 📋 Prerrequisitos
 
-### Para Windows:
-- **Docker Desktop** para Windows (incluye Docker Compose)
-- **Git** para Windows
-- **curl** (incluido en Windows 10/11)
-
-### Para Linux/Mac:
+- Ubuntu 18.04 o superior
 - Docker (v20.10+)
 - Docker Compose (v2.0+)
-- Git
-- curl
+- 2GB RAM mínimo
+- 2GB espacio libre
 
 ## 🔗 Enlaces Útiles
 
 - **Repositorio**: https://github.com/dperezinnopulse/GenDoc
-- **Documentación**: Ver `DEPLOYMENT.md`
 - **API Docs**: http://localhost:8080/docs (después del despliegue)
