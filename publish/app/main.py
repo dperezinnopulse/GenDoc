@@ -43,7 +43,7 @@ def root():
 @app.get("/health")
 def health_check():
     """Endpoint de health check para el despliegue."""
-    return {"status": "healthy", "service": "GenDoc", "version": "1.0.0"}
+            return {"status": "healthy", "service": "GenDoc", "version": "1.1.0"}
 
 # @app.on_event("startup")
 # async def startup_event():
