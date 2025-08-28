@@ -8,6 +8,22 @@
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 6px; border-bottom: 1px solid #eee; }
     input[type=text], input[type=number] { width: 100%; }
+    .delete-btn { 
+      background: #ef4444; 
+      color: white; 
+      border: none; 
+      border-radius: 4px; 
+      padding: 4px 8px; 
+      cursor: pointer; 
+      font-size: 12px;
+    }
+    .delete-btn:hover { background: #dc2626; }
+    .actions-col { width: 80px; text-align: center; }
+    .deleted-row { 
+      background-color: #fee2e2; 
+      opacity: 0.6; 
+      text-decoration: line-through; 
+    }
   </style>
 </head>
 <body>
@@ -15,14 +31,14 @@
     <a href="/admin/templates/{{ template.id }}">← Volver</a>
     <h1>Editar marcadores: {{ template.name }}</h1>
 
-    <form method="post" action="/admin/templates/{{ template.id }}/markers">
+    <form method="post" action="/admin/templates/{{ template.id }}/markers" id="markersForm">
       <h2>Campos fijos</h2>
       <table>
-        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Tipo</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Tipo</th><th class="actions-col">Acciones</th></tr></thead>
         <tbody id="fixedBody">
           {% for k, v in positions.items() %}
           {% if not k.startswith('_') %}
-          <tr>
+          <tr data-type="fixed" data-name="{{ k }}">
             <td><input type="text" name="name[]" value="{{ k }}" /></td>
             <td><input type="number" name="x[]" step="0.1" value="{{ v[0] }}" /></td>
             <td><input type="number" name="y[]" step="0.1" value="{{ v[1] }}" /></td>
@@ -31,6 +47,7 @@
               <option value="image">Imagen</option>
               <option value="signature">Firma</option>
             </select></td>
+            <td><button type="button" class="delete-btn" onclick="deleteMarker(this)">Eliminar</button></td>
           </tr>
           {% endif %}
           {% endfor %}
@@ -43,21 +60,23 @@
               <option value="image">Imagen</option>
               <option value="signature">Firma</option>
             </select></td>
+            <td></td>
           </tr>
         </tbody>
       </table>
 
       <h2>Campos de imagen</h2>
       <table>
-        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Ancho</th><th>Alto</th></tr></thead>
-        <tbody>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Ancho</th><th>Alto</th><th class="actions-col">Acciones</th></tr></thead>
+        <tbody id="imagesBody">
           {% for k, v in images.items() %}
-          <tr>
+          <tr data-type="image" data-name="{{ k }}">
             <td><input type="text" name="img_name[]" value="{{ k }}" /></td>
             <td><input type="number" name="img_x[]" step="0.1" value="{{ v.x }}" /></td>
             <td><input type="number" name="img_y[]" step="0.1" value="{{ v.y }}" /></td>
             <td><input type="number" name="img_width[]" step="1" value="{{ v.width }}" /></td>
             <td><input type="number" name="img_height[]" step="1" value="{{ v.height }}" /></td>
+            <td><button type="button" class="delete-btn" onclick="deleteMarker(this)">Eliminar</button></td>
           </tr>
           {% endfor %}
           <tr>
@@ -66,21 +85,23 @@
             <td><input type="number" name="img_y[]" step="0.1" /></td>
             <td><input type="number" name="img_width[]" step="1" value="100" /></td>
             <td><input type="number" name="img_height[]" step="1" value="100" /></td>
+            <td></td>
           </tr>
         </tbody>
       </table>
 
       <h2>Campos de firma</h2>
       <table>
-        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Ancho</th><th>Alto</th></tr></thead>
-        <tbody>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th>Ancho</th><th>Alto</th><th class="actions-col">Acciones</th></tr></thead>
+        <tbody id="signaturesBody">
           {% for k, v in signatures.items() %}
-          <tr>
+          <tr data-type="signature" data-name="{{ k }}">
             <td><input type="text" name="sig_name[]" value="{{ k }}" /></td>
             <td><input type="number" name="sig_x[]" step="0.1" value="{{ v.x }}" /></td>
             <td><input type="number" name="sig_y[]" step="0.1" value="{{ v.y }}" /></td>
             <td><input type="number" name="sig_width[]" step="1" value="{{ v.width }}" /></td>
             <td><input type="number" name="sig_height[]" step="1" value="{{ v.height }}" /></td>
+            <td><button type="button" class="delete-btn" onclick="deleteMarker(this)">Eliminar</button></td>
           </tr>
           {% endfor %}
           <tr>
@@ -89,44 +110,49 @@
             <td><input type="number" name="sig_y[]" step="0.1" /></td>
             <td><input type="number" name="sig_width[]" step="1" value="200" /></td>
             <td><input type="number" name="sig_height[]" step="1" value="300" /></td>
+            <td></td>
           </tr>
         </tbody>
       </table>
 
       <h2>Cabecera</h2>
       <table>
-        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th></tr></thead>
-        <tbody>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th class="actions-col">Acciones</th></tr></thead>
+        <tbody id="headerBody">
           {% for k, v in header_positions.items() %}
-          <tr>
+          <tr data-type="header" data-name="{{ k }}">
             <td><input type="text" name="hname[]" value="{{ k }}" /></td>
             <td><input type="number" name="hx[]" step="0.1" value="{{ v[0] }}" /></td>
             <td><input type="number" name="hy[]" step="0.1" value="{{ v[1] }}" /></td>
+            <td><button type="button" class="delete-btn" onclick="deleteMarker(this)">Eliminar</button></td>
           </tr>
           {% endfor %}
           <tr>
             <td><input type="text" name="hname[]" placeholder="Nuevo" /></td>
             <td><input type="number" name="hx[]" step="0.1" /></td>
             <td><input type="number" name="hy[]" step="0.1" /></td>
+            <td></td>
           </tr>
         </tbody>
       </table>
 
       <h2>Pie</h2>
       <table>
-        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th></tr></thead>
-        <tbody>
+        <thead><tr><th>Nombre</th><th>X (px)</th><th>Y (px)</th><th class="actions-col">Acciones</th></tr></thead>
+        <tbody id="footerBody">
           {% for k, v in footer_positions.items() %}
-          <tr>
+          <tr data-type="footer" data-name="{{ k }}">
             <td><input type="text" name="fname[]" value="{{ k }}" /></td>
             <td><input type="number" name="fx[]" step="0.1" value="{{ v[0] }}" /></td>
             <td><input type="number" name="fy[]" step="0.1" value="{{ v[1] }}" /></td>
+            <td><button type="button" class="delete-btn" onclick="deleteMarker(this)">Eliminar</button></td>
           </tr>
           {% endfor %}
           <tr>
             <td><input type="text" name="fname[]" placeholder="Nuevo" /></td>
             <td><input type="number" name="fx[]" step="0.1" /></td>
             <td><input type="number" name="fy[]" step="0.1" /></td>
+            <td></td>
           </tr>
         </tbody>
       </table>
@@ -136,5 +162,62 @@
       </div>
     </form>
   </div>
+
+  <script>
+    function deleteMarker(button) {
+      if (confirm('¿Estás seguro de que quieres eliminar este marcador?')) {
+        const row = button.closest('tr');
+        const markerType = row.dataset.type;
+        const markerName = row.dataset.name;
+        
+        // Marcar la fila como eliminada visualmente
+        row.classList.add('deleted-row');
+        
+        // Deshabilitar todos los inputs en la fila
+        const inputs = row.querySelectorAll('input, select');
+        inputs.forEach(input => {
+          input.disabled = true;
+        });
+        
+        // Cambiar el botón a "Restaurar"
+        button.textContent = 'Restaurar';
+        button.style.background = '#10b981';
+        button.onclick = function() { restoreMarker(this); };
+        
+        // Añadir campo oculto para indicar que debe eliminarse
+        const deleteField = document.createElement('input');
+        deleteField.type = 'hidden';
+        deleteField.name = 'delete_' + markerType + '[]';
+        deleteField.value = markerName;
+        row.appendChild(deleteField);
+      }
+    }
+    
+    function restoreMarker(button) {
+      const row = button.closest('tr');
+      const markerType = row.dataset.type;
+      const markerName = row.dataset.name;
+      
+      // Restaurar la fila visualmente
+      row.classList.remove('deleted-row');
+      
+      // Habilitar todos los inputs en la fila
+      const inputs = row.querySelectorAll('input, select');
+      inputs.forEach(input => {
+        input.disabled = false;
+      });
+      
+      // Cambiar el botón de vuelta a "Eliminar"
+      button.textContent = 'Eliminar';
+      button.style.background = '#ef4444';
+      button.onclick = function() { deleteMarker(this); };
+      
+      // Remover el campo oculto de eliminación
+      const deleteField = row.querySelector('input[name^="delete_' + markerType + '[]"]');
+      if (deleteField) {
+        deleteField.remove();
+      }
+    }
+  </script>
 </body>
 </html>

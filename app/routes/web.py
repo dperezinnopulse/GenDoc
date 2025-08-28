@@ -234,7 +234,7 @@ async def test_render(template_id: str, data_json: str = Form("{}"), format: str
             # Generar imagen PNG
             pdf_bytes = renderer.render_to_pdf(template_id, data)
             # Convertir PDF a imagen optimizada
-            image_bytes = renderer.convert_pdf_to_image(pdf_bytes)
+            image_bytes, _, _ = renderer.convert_pdf_to_image(pdf_bytes)
             return StreamingResponse(
                 io.BytesIO(image_bytes), 
                 media_type="image/png", 
@@ -491,7 +491,14 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
     form = await request.form()
     mapping = _normalize_mapping(store.get_template_meta(template_id).get("mapping", {}))
     
-    # Collect fixed markers
+    # Get lists of markers to delete
+    delete_fixed = form.getlist("delete_fixed[]")
+    delete_image = form.getlist("delete_image[]")
+    delete_signature = form.getlist("delete_signature[]")
+    delete_header = form.getlist("delete_header[]")
+    delete_footer = form.getlist("delete_footer[]")
+    
+    # Collect fixed markers (skip disabled ones)
     names = form.getlist("name[]")
     xs = form.getlist("x[]")
     ys = form.getlist("y[]")
@@ -501,6 +508,9 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
         k = (names[i] or "").strip()
         if not k:
             continue
+        # Skip if this marker is marked for deletion
+        if k in delete_fixed:
+            continue
         try:
             x = float(xs[i])
             y = float(ys[i])
@@ -508,7 +518,7 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
             continue
         new_positions[k] = [x, y]
     
-    # Collect image markers
+    # Collect image markers (skip disabled ones)
     img_names = form.getlist("img_name[]")
     img_xs = form.getlist("img_x[]")
     img_ys = form.getlist("img_y[]")
@@ -519,6 +529,9 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
         k = (img_names[i] or "").strip()
         if not k:
             continue
+        # Skip if this marker is marked for deletion
+        if k in delete_image:
+            continue
         try:
             x = float(img_xs[i])
             y = float(img_ys[i])
@@ -528,7 +541,7 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
             continue
         new_images[k] = {"x": x, "y": y, "width": width, "height": height}
 
-    # Collect signature markers
+    # Collect signature markers (skip disabled ones)
     sig_names = form.getlist("sig_name[]")
     sig_xs = form.getlist("sig_x[]")
     sig_ys = form.getlist("sig_y[]")
@@ -539,6 +552,9 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
         k = (sig_names[i] or "").strip()
         if not k:
             continue
+        # Skip if this marker is marked for deletion
+        if k in delete_signature:
+            continue
         try:
             x = float(sig_xs[i])
             y = float(sig_ys[i])
@@ -548,7 +564,7 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
             continue
         new_signatures[k] = {"x": x, "y": y, "width": width, "height": height}
     
-    # Header markers
+    # Header markers (skip disabled ones)
     h_names = form.getlist("hname[]")
     h_xs = form.getlist("hx[]")
     h_ys = form.getlist("hy[]")
@@ -557,6 +573,9 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
         k = (h_names[i] or "").strip()
         if not k:
             continue
+        # Skip if this marker is marked for deletion
+        if k in delete_header:
+            continue
         try:
             x = float(h_xs[i])
             y = float(h_ys[i])
@@ -564,7 +583,7 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
             continue
         new_header[k] = [x, y]
     
-    # Footer markers
+    # Footer markers (skip disabled ones)
     f_names = form.getlist("fname[]")
     f_xs = form.getlist("fx[]")
     f_ys = form.getlist("fy[]")
@@ -572,6 +591,9 @@ async def save_markers(template_id: str, request: Request, user: str = Depends(r
     for i in range(len(f_names)):
         k = (f_names[i] or "").strip()
         if not k:
+            continue
+        # Skip if this marker is marked for deletion
+        if k in delete_footer:
             continue
         try:
             x = float(f_xs[i])
