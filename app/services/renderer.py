@@ -370,7 +370,7 @@ class Renderer:
                         continue
                     debug_lines.append(f"{key}: px=({x_px:.1f},{y_px:.1f}) -> pt=({x_pt:.1f},{y_pt:.1f}) final=({final_x:.1f},{final_y:.1f})")
                     # draw crosshair at final position for visual check
-                    draw_cross(x_pt, y_pt)
+                    # draw_cross(x_pt, y_pt)  # Comentado: no pintar cruces en el render final
                 # Repeat rows debug (only if array defined)
                 if arr_path:
                     start_idx = page_idx * rows_per_page
@@ -386,20 +386,21 @@ class Renderer:
                                 if x_px is None:
                                     continue
                                 debug_lines.append(f"{key}[{idx}]: px=({x_px:.1f},{y_px:.1f}) -> base_pt=({x_pt:.1f},{y_pt_base if isinstance(y_pt_base,(int,float)) else 0:.1f}) y_item={y_item:.1f} final=({final_x:.1f},{final_y:.1f})")
-                                draw_cross(x_pt, y_item)
+                                # draw_cross(x_pt, y_item)  # Comentado: no pintar cruces en el render final
                 # Draw debug lines in gray at top-left
-                try:
-                    c.setFont("Helvetica", 6)
-                except Exception:
-                    pass
-                try:
-                    c.setFillColor(HexColor("#666666"))
-                except Exception:
-                    pass
-                y_cursor = height - 10
-                for line in debug_lines[:100]:
-                    c.drawString(10, y_cursor, line)
-                    y_cursor -= 8
+                # Comentado: no mostrar coordenadas de debug en el render final
+                # try:
+                #     c.setFont("Helvetica", 6)
+                # except Exception:
+                #     pass
+                # try:
+                #     c.setFillColor(HexColor("#666666"))
+                # except Exception:
+                #     pass
+                # y_cursor = height - 10
+                # for line in debug_lines[:100]:
+                #     c.drawString(10, y_cursor, line)
+                #     y_cursor -= 8
                 # Draw repeated rows content
                 if arr_path:
                     start_idx = page_idx * rows_per_page
