@@ -40,6 +40,11 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 def root():
     return "<meta http-equiv='refresh' content='0; url=/admin' />"
 
+@app.get("/health")
+def health_check():
+    """Endpoint de health check para el despliegue."""
+    return {"status": "healthy", "service": "GenDoc", "version": "1.0.0"}
+
 # @app.on_event("startup")
 # async def startup_event():
 #     """Evento de inicio de la aplicación."""

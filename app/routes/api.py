@@ -241,19 +241,41 @@ async def render_document(req: RenderRequest):
                     print(f"🔍 DEBUG: Template coordinates for '{key}': x={x_template}, y={y_template}")
                     print(f"🔍 DEBUG: Image dimensions: {image_width} x {image_height}")
                     
-                    # Las coordenadas del template están en un sistema personalizado
-                    # Usar ratios directos calculados para este template específico
-                    # Basándome en las coordenadas reales: ratio_x = 1.2601, ratio_y = 7.4728
-                    ratio_x = 1.2601
-                    ratio_y = 7.4728
+                    # Calcular factores de escalado dinámicamente
+                    # Intentar diferentes métodos de escalado y elegir el más apropiado
                     
-                    # Aplicar ratios directos
-                    final_x = int(x_template * ratio_x)
-                    final_y = int(y_template * ratio_y)
+                    # Método 1: Escalado basado en dimensiones del PDF (estándar)
+                    scale_x_pdf = image_width / original_pdf_width_points
+                    scale_y_pdf = image_height / original_pdf_height_points
                     
-                    # Escalar dimensiones usando el mismo ratio X
-                    final_width = int(meta.get("width", 200) * ratio_x)
-                    final_height = int(meta.get("height", 100) * ratio_y)
+                    # Método 2: Escalado directo (para sistemas personalizados)
+                    # Usar un factor de escalado basado en la relación entre coordenadas típicas
+                    # Para este template específico, las coordenadas están en un sistema personalizado
+                    # pero podemos detectar automáticamente el factor
+                    
+                    # Detectar si las coordenadas están en un rango razonable para el PDF
+                    if x_template <= original_pdf_width_points and y_template <= original_pdf_height_points:
+                        # Coordenadas están en el sistema del PDF
+                        x_image = int(x_template * scale_x_pdf)
+                        y_image = int((original_pdf_height_points - y_template) * scale_y_pdf)
+                        final_x = x_image
+                        final_y = y_image
+                        final_width = int(meta.get("width", 200) * scale_x_pdf)
+                        final_height = int(meta.get("height", 100) * scale_y_pdf)
+                    else:
+                        # Coordenadas están en un sistema personalizado
+                        # Calcular factores de escalado basados en las dimensiones de la imagen
+                        # y las coordenadas típicas de este tipo de template
+                        
+                        # Para templates con coordenadas personalizadas, usar un escalado proporcional
+                        # basado en las dimensiones de la imagen final
+                        ratio_x = image_width / 1000  # Asumiendo coordenadas en escala de 1000
+                        ratio_y = image_height / 1000
+                        
+                        final_x = int(x_template * ratio_x)
+                        final_y = int(y_template * ratio_y)
+                        final_width = int(meta.get("width", 200) * ratio_x)
+                        final_height = int(meta.get("height", 100) * ratio_y)
                     
                     print(f"🔍 DEBUG: Converted coordinates for '{key}': x={final_x}, y={final_y}, w={final_width}, h={final_height}")
                     
